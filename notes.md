@@ -10,7 +10,7 @@
 - GitLab CI
 - [Docker](https://docs.gitlab.com/omnibus/docker/README.html)container
 - [Shared Runner](https://docs.gitlab.com/ce/ci/runners/README.html)
-- restrict Container to [checkstyle
+- restrict Container to [checkstyle](http://checkstyle.sourceforge.net/)
 - disable internet access for container
   
 ## JPlag
