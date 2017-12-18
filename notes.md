@@ -22,7 +22,7 @@
 
 ## (optional) sync script
 
-- (one-way) sync students and groups from [http://docs.studip.de/develop/Entwickler/RESTAPI](Stud.IP REST API) to [https://docs.gitlab.com/ce/api/](Gitlab REST API)
+- (one-way) sync students and groups from [Stud.IP REST API](http://docs.studip.de/develop/Entwickler/RESTAPI) to [Gitlab REST API](https://docs.gitlab.com/ce/api/)
 - fork public repo with CI config etc into one private repo per student
 - give students *Developer* access
 - *Owner* is whoever
