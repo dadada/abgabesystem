@@ -8,17 +8,17 @@
 ## Checkstyle
 
 - GitLab CI
-- (Docker)container
-- Shared Runner
-- restrict Container to checkstyle
+- [Docker](https://docs.gitlab.com/omnibus/docker/README.html)container
+- [Shared Runner](https://docs.gitlab.com/ce/ci/runners/README.html)
+- restrict Container to [checkstyle
 - disable internet access for container
   
-## Deadline [at,cron]job
+## JPlag
 
-- each repo has protected master branch -> used for handing in exercises
-- create automatic protected TAG on deadline in each repo
-- trigger protected runner via push to master repo
-- protected runner runs checks out TAG from all repos into /tmp and runs [JPlag](https://jplag.ipd.kit.edu/)
+- Deadline [at,cron]job or schedule via gitlab
+- triggers [Protected Runner](https://docs.gitlab.com/ee/ci/runners/README.html#protected-runners)
+- creates automatic protected TAG in each repo
+- checks out TAG from all repos into /tmp and runs [JPlag](https://jplag.ipd.kit.edu/)
 
 ## (optional) sync script
 
