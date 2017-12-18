@@ -1,9 +1,28 @@
 # Programmieren [1,2] Gitlab
 
-## Authentisierung
+## Authentication
 
 - use GITZ LDAP for login
 - not allow "create new repo"
+
+
+## Structure
+
+- main repo
+
+  + publish example solutions
+  + CI config for checkstyle
+  + Protected Runner for JPlag
+  + restrict access to branches with example solutions
+   
+- student repos
+
+  + forked from main repo
+  + one repo per student
+  + student has *Developer* Access
+  + *tutors* group has *Master* access
+  + students can request access (Abgabepartner)
+  + *tutors* can grant access
 
 ## Checkstyle
 
@@ -23,8 +42,3 @@
 ## (optional) sync script
 
 - (one-way) sync students and groups from [Stud.IP REST API](http://docs.studip.de/develop/Entwickler/RESTAPI) to [Gitlab REST API](https://docs.gitlab.com/ce/api/)
-- fork public repo with CI config etc into one private repo per student
-- give students *Developer* access
-- *Owner* is whoever
-- group *tutors* has *Master* access to all repos (students sometimes switch groups)
-- students *Request Access* to "Abgabepartner" repo, *tutors* can grant access
