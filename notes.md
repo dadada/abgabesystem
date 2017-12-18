@@ -17,8 +17,8 @@
 
 - each repo has protected master branch -> used for handing in exercises
 - create automatic protected TAG on deadline in each repo
-- trigger via push to master repo
-- start jplag via protected runner that can clone / checkout all repos
+- trigger protected runner via push to master repo
+- protected runner runs checks out TAG from all repos into /tmp and runs [JPlag](https://jplag.ipd.kit.edu/)
 
 ## (optional) sync script
 
