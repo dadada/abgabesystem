@@ -9,14 +9,12 @@
 ## Structure
 
 - main repo
-
   + publish example solutions
   + CI config for checkstyle
   + Protected Runner for JPlag
   + restrict access to branches with example solutions
    
 - student repos
-
   + forked from main repo
   + one repo per student
   + student has *Developer* Access
