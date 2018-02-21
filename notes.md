@@ -1,5 +1,7 @@
 # Programmieren [1,2] Gitlab
 
+- https://docs.gitlab.com/omnibus/README.html
+
 ## Authentication
 
 - use GITZ LDAP for login
@@ -36,6 +38,8 @@
 - triggers [Protected Runner](https://docs.gitlab.com/ee/ci/runners/README.html#protected-runners)
 - creates automatic protected TAG in each repo
 - checks out TAG from all repos into /tmp and runs [JPlag](https://jplag.ipd.kit.edu/)
+- replace with MOSS? https://github.com/soachishti/moss.py
+- deploy key in each repo
 
 ## (optional) sync script
 
