@@ -1,8 +1,0 @@
-image: y0067212/checkstyle-ips
-
-checkstyle:
-  script:
-    - java -jar checkstyle.jar -c tubs_checks.xml .
-  artifacts:
-    paths:
-      - checkstyle/
