@@ -44,3 +44,19 @@
 ## (optional) sync script
 
 - (one-way) sync students and groups from [Stud.IP REST API](http://docs.studip.de/develop/Entwickler/RESTAPI) to [Gitlab REST API](https://docs.gitlab.com/ce/api/)
+
+# Replicate (TODO: ansible playbook)
+
+- install gitlab
+- install docker
+- copy gitlab.rb
+- partially protected
+- default project limit = 0
+- shared runner for checkstyle
+
+- protected runner for
+  
+  + setting protected tags
+  + running jplag
+
+- script for creating repos and groups
