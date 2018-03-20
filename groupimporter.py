@@ -1,7 +1,12 @@
 import csv
 import argparse
+import gitlab
 
 from mimetypes import guess_type
+
+
+gl = gitlab.Gitlab.from_config()
+gl.auth()
 
 
 def group_name(longname):
@@ -41,6 +46,41 @@ def parse_users_csv(csvfile, encoding='utf-8'):
             yield line['Nutzernamen'], line['E-Mail'], group_name(line['Gruppe'])
 
 
+def create_student(user_id, email, tutorial):
+    """Create user and add to tutorial group and workgroup based on preferred Abgabepartner
+    User will later be updated with password from LDAP
+
+    https://gitlab.com/gitlab-org/gitlab-ee/issues/699
+    """
+    pass
+
+
+def create_abgabegruppe(tutorial):
+    """Create a Abgabegruppe"""
+    pass
+
+
+def create_tutorial(course, group):
+    """Creates a group via Gitlab API"""
+
+    path = group.replace(' ', '_').lower()
+
+    # TODO implement create subgroups method in python-gitlab for API v4
+    subgroup = course.subgroups.create({'name': group, 'path': path})
+
+
+def create_course(course_name):
+
+    try:
+        path = course_name.replace(' ', '_').lower()
+        course = gl.groups.create({'name': course_name, 'path': path})
+    except:
+        # TODO implement search method in python-gitlab for API v4
+        course = gl.groups.get(id=34)
+
+    return course
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Import groups and users from data source')
@@ -51,20 +91,21 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     type, _ = guess_type(args.source[0])
+    course = args.course[0]
 
     print(type)
 
     if type == 'text/csv':
 
-        groupnames = parse_groups_csv(args.source[0], args.encoding[0])
+        course = create_course(course)
+        print(course)
 
+        groupnames = parse_groups_csv(args.source[0], args.encoding[0])
         for group in groupnames:
-            print(args.course[0] + ' ' + group)
+            create_tutorial(course, group)
 
         users = parse_users_csv(args.source[0], args.encoding[0])
 
-        for user in users:
-            print(user)
 
     elif type == None:
 
