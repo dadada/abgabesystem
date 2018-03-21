@@ -71,12 +71,14 @@ def create_tutorial(course, group):
 
 def create_course(course_name):
 
-    try:
+    courses = gl.groups.list(search=course_name)
+    course = None
+
+    if len(courses) == 0:
         path = course_name.replace(' ', '_').lower()
         course = gl.groups.create({'name': course_name, 'path': path})
-    except:
-        # TODO implement search method in python-gitlab for API v4
-        course = gl.groups.get(id=34)
+    else:
+        course = courses[0]
 
     return course
 
