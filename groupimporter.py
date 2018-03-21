@@ -63,10 +63,15 @@ def create_abgabegruppe(tutorial):
 def create_tutorial(course, group):
     """Creates a group via Gitlab API"""
 
+    # this is the short path, not the full path
     path = group.replace(' ', '_').lower()
 
-    # TODO implement create subgroups method in python-gitlab for API v4
-    subgroup = course.subgroups.create({'name': group, 'path': path})
+    try:
+        subgroup = gl.groups.create({'name': group, 'path': path, 'parent_id': course.id})
+    except gitlab.exceptions.GitlabHttpError as e:
+        print(e)
+
+    return subgroup
 
 
 def create_course(course_name):
@@ -100,11 +105,12 @@ if __name__ == '__main__':
     if type == 'text/csv':
 
         course = create_course(course)
-        print(course)
+        print('created course', course)
 
         groupnames = parse_groups_csv(args.source[0], args.encoding[0])
         for group in groupnames:
             create_tutorial(course, group)
+            print('created tutorial group', group)
 
         users = parse_users_csv(args.source[0], args.encoding[0])
 
