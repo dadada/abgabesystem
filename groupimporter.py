@@ -5,6 +5,9 @@ import gitlab
 from mimetypes import guess_type
 
 
+DEFAULT_REPOS = ['solutions', 'exercises']
+BASEDN = 'ou=people,dc=tu-bs,dc=de'
+
 gl = gitlab.Gitlab.from_config()
 gl.auth()
 
@@ -43,7 +46,11 @@ def parse_users_csv(csvfile, encoding='utf-8'):
         reader = csv.DictReader(lines, delimiter=';', quotechar='"')
 
         for line in reader:
-            yield line['Nutzernamen'], group_name(line['Gruppe'])
+            user = object()
+            user.id = line['Nutzernamen']
+            user.email = line['E-Mail']
+            user.name = line['Vorname'] + ' ' + line['Nachname']
+            user.group = group_name(line['Gruppe'])
 
 
 def create_student(user_id, email, tutorial):
@@ -87,21 +94,14 @@ def create_course(course_name):
     return course
 
 
-"""TODO
-- add users (LDAP) with custom attribute for group, matrikelnummer
-  + if user exists set custom attributes
-
-- create search for custom attribute (-> checkout repos for group)
-"""
-
 def create_course_project(name, course):
 
     try:
-        gl.projects.create(
-            {'name': name,
-             'namespace_id': course.id,
-             'visibility': 'internal'
-            })
+        gl.projects.create({
+            'name': name,
+            'namespace_id': course.id,
+            'visibility': 'internal'
+        })
     except gitlab.exceptions.GitlabHttpError as e:
         print(e)
 
@@ -114,10 +114,40 @@ def setup_user_project(user, base, course):
 
     fork = course.projects.list(name=user)
     if len(fork) == 0:
-        fork = base.forks.create({'name': user, 'namespace': base.namspace})
-    fork.members.create({'user_id': user, 'access_level': gitlab.DEVELOPER_ACCESS})
+        fork = base.forks.create({
+            'name': user.id,
+            'namespace': base.namspace,
+            'visibility': 'private'
+        })
+
+    fork.members.create({
+        'user_id': user.id,
+        'access_level': gitlab.DEVELOPER_ACCESS
+    })
 
     return fork
+
+
+def create_dummy_ldap_user(user):
+    """Creates a dummy user for users that do not exist in gitlab
+    but in LDAP and have not logged in yet"""
+
+    users = gl.users.list(search=user)
+
+    if len(users) == 0:
+        dummy = gl.users.create({
+            'email': user.email,
+            'username': user.name,
+            'name': user.id,
+            'provider': 'main',
+            'skip_confirmation': true,
+            'extern_uid': 'uid=%s,%s' % (user.id, basedn),
+            'password': secrets.token_urlsafe(nbytes=32)
+        })
+
+        return dummy
+    else:
+        return users[0]
 
 
 if __name__ == '__main__':
@@ -133,8 +163,9 @@ if __name__ == '__main__':
     course = args.course[0]
 
     course = create_course(course)
-    course_project = create_course_project('solutions', course)
-    course_project = create_course_project('exercises', course)
+
+    for repo in DEFAULT_REPOS:
+        course_project = create_course_project(repo, course)
 
     users = None
 
@@ -146,5 +177,13 @@ if __name__ == '__main__':
 
         print('MIME type not recognized')
 
-    for user, group in users:
+    for user in users:
+        create_dummy_user_ldap(user)
         setup_user_project(user, course)
+
+"""TODO
+- add users (LDAP) with custom attribute for group, matrikelnummer
+  + if user exists set custom attributes
+
+- create search for custom attribute (-> checkout repos for group)
+"""
