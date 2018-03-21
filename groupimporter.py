@@ -37,13 +37,13 @@ def parse_groups_csv(csvfile, encoding='utf-8'):
 
 
 def parse_users_csv(csvfile, encoding='utf-8'):
-    """Reads user information from a CSV file and yields each user as a dict"""
+    """Reads user information from a CSV file and yields id and group"""
 
     with open(csvfile, 'r', encoding=encoding) as lines:
         reader = csv.DictReader(lines, delimiter=';', quotechar='"')
 
         for line in reader:
-            yield line['Nutzernamen'], line['E-Mail'], group_name(line['Gruppe'])
+            yield line['Nutzernamen'], group_name(line['Gruppe'])
 
 
 def create_student(user_id, email, tutorial):
@@ -68,10 +68,9 @@ def create_tutorial(course, group):
 
     try:
         subgroup = gl.groups.create({'name': group, 'path': path, 'parent_id': course.id})
+        return subgroup
     except gitlab.exceptions.GitlabHttpError as e:
         print(e)
-
-    return subgroup
 
 
 def create_course(course_name):
@@ -87,6 +86,33 @@ def create_course(course_name):
 
     return course
 
+
+def create_course_admin_group(course):
+    """Creates an administrative group for the course
+    This group will be added as owner of each student repo"""
+
+    try:
+        subgroup = gl.groups.create({'name': 'admin', 'path': 'admin', 'parent_id': course.id})
+        return subgroup
+    except gitlab.exceptions.GitlabHttpError as e:
+        print(e)
+
+"""TODO
+- create admin group for course and add hiwis
+
+- add users (LDAP) with custom attribute for group, matrikelnummer
+  + if user exists set custom attributes
+
+- add users to course
+
+- create student repos
+  + fork from common repo
+  + add admin group to each repo as owner / master
+
+
+- create search for custom attribute (-> checkout repos for group)
+
+"""
 
 if __name__ == '__main__':
 
@@ -105,15 +131,9 @@ if __name__ == '__main__':
     if type == 'text/csv':
 
         course = create_course(course)
-        print('created course', course)
-
-        groupnames = parse_groups_csv(args.source[0], args.encoding[0])
-        for group in groupnames:
-            create_tutorial(course, group)
-            print('created tutorial group', group)
-
-        users = parse_users_csv(args.source[0], args.encoding[0])
-
+        admins = create_course_admin_group(course)
+        # TODO get functions from API and add hiwis to admins
+        #users = parse_users_csv(args.source[0], args.encoding[0])
 
     elif type == None:
 
