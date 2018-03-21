@@ -87,32 +87,38 @@ def create_course(course_name):
     return course
 
 
-def create_course_admin_group(course):
-    """Creates an administrative group for the course
-    This group will be added as owner of each student repo"""
-
-    try:
-        subgroup = gl.groups.create({'name': 'admin', 'path': 'admin', 'parent_id': course.id})
-        return subgroup
-    except gitlab.exceptions.GitlabHttpError as e:
-        print(e)
-
 """TODO
-- create admin group for course and add hiwis
-
 - add users (LDAP) with custom attribute for group, matrikelnummer
   + if user exists set custom attributes
 
-- add users to course
-
-- create student repos
-  + fork from common repo
-  + add admin group to each repo as owner / master
-
-
 - create search for custom attribute (-> checkout repos for group)
-
 """
+
+def create_course_project(name, course):
+
+    try:
+        gl.projects.create(
+            {'name': name,
+             'namespace_id': course.id,
+             'visibility': 'internal'
+            })
+    except gitlab.exceptions.GitlabHttpError as e:
+        print(e)
+
+
+def setup_user_project(user, base, course):
+    """Create user projects as forks from course/solutions
+    in namespace of course and add user as developer (NOT master)
+    user should not be able to modify protected TAG or force-push on protected branch
+    users can later invite other users into their projects"""
+
+    fork = course.projects.list(name=user)
+    if len(fork) == 0:
+        fork = base.forks.create({'name': user, 'namespace': base.namspace})
+    fork.members.create({'user_id': user, 'access_level': gitlab.DEVELOPER_ACCESS})
+
+    return fork
+
 
 if __name__ == '__main__':
 
@@ -126,15 +132,19 @@ if __name__ == '__main__':
     type, _ = guess_type(args.source[0])
     course = args.course[0]
 
-    print(type)
+    course = create_course(course)
+    course_project = create_course_project('solutions', course)
+    course_project = create_course_project('exercises', course)
+
+    users = None
 
     if type == 'text/csv':
-
-        course = create_course(course)
-        admins = create_course_admin_group(course)
         # TODO get functions from API and add hiwis to admins
-        #users = parse_users_csv(args.source[0], args.encoding[0])
+        users = parse_users_csv(args.source[0], args.encoding[0])
 
     elif type == None:
 
         print('MIME type not recognized')
+
+    for user, group in users:
+        setup_user_project(user, course)
