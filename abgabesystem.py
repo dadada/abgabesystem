@@ -39,10 +39,9 @@ class Course(yaml.YAMLObject):
 
     yaml_tag = 'Course'
 
-    def __init__(self, name, base, ldap, deadlines):
+    def __init__(self, name, base, deadlines):
         self.name = name
         self.base = base
-        self.ldap = ldap
         self.deadlines = deadlines
 
     def create_group(self, gl):
@@ -123,20 +122,20 @@ def deadlines(gl, course, args):
             deadline.trigger(course)
 
 
-def sync(gl, courses, args):
+def sync(gl, conf, args):
     """Sync groups and students from Stud.IP to Gitlab and create student
     projects
 
     one-way sync!!!
     """
 
-    for course in courses:
+    for course in conf['courses']:
         course.create_group(gl)
         create_project(course.group)
 
         with open(args.students[0]) as csvfile:
             for student in Student.from_csv(csvfile):
-                student.create_user(gl, course.ldap)
+                student.create_user(gl, conf['ldap'])
 
 
 def parseconf(conf):

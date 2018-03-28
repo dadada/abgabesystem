@@ -1,20 +1,16 @@
----
-!!Course
-name: Programmieren 1
-base: solutions
 ldap:
   basedn: "ou=people,dc=tu-bs,dc=de"
   provider: main
-deadlines:
-  -
-    !!Deadline
-    tag: Exercise 1
-    time: 2018-04-01t00:00.00
-    ref: master
-
-  -
-    !!Deadline
-    tag: Exercise 2
-    time: 2018-04-15t15:00.00
-    ref: master
-        
+courses:
+  - !!python/object:abgabesystem.Course
+    name: Programmieren 1
+    base: solutions
+    deadlines:
+      - !!python/object:abgabesystem.Deadline
+        tag: Exercise 1
+        time: !!timestamp 2018-04-01
+        ref: master
+      - !!python/object:abgabesystem.Deadline
+        tag: Exercise 2
+        time: !!timestamp 2018-04-15
+        ref: master
