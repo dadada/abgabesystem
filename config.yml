@@ -1,23 +1,20 @@
+---
+!!Course
+name: Programmieren 1
+base: solutions
 ldap:
   basedn: "ou=people,dc=tu-bs,dc=de"
-  dummy_user:
-    provider: main
-    skip_confirmation: true
-
-courses:
+  provider: main
+deadlines:
   -
---- !Course
-    name: Programmieren 1
-    repos: [solutions, exercises]
-    deadlines:
-      -
-    --- !Deadline
-        tag: Exercise 1
-        time: 2018-04-01t00:00.00
-        ref: master
+    !!Deadline
+    tag: Exercise 1
+    time: 2018-04-01t00:00.00
+    ref: master
 
-      -
-    --- !Deadline
-        tag: Exercise 2
-        time: 2018-04-15t15:00.00
-        ref: master
+  -
+    !!Deadline
+    tag: Exercise 2
+    time: 2018-04-15t15:00.00
+    ref: master
+        

@@ -19,9 +19,8 @@ class Deadline(yaml.YAMLObject):
         self.time = time
         self.ref = ref
 
-    def tag(self, project):
-        """Create protected tag on ref for all deadlines that have been
-        reached"""
+    def trigger(self, project):
+        """Create protected tag on ref"""
 
         try:
             project.tags.create({
@@ -31,42 +30,28 @@ class Deadline(yaml.YAMLObject):
         except gitlab.exceptions.GitlabHttpError as e:
             log.warn(e)
 
+    def test(self):
+        return self.time <= datetime.datetime.now()
+
 
 class Course(yaml.YAMLObject):
     """A course"""
 
     yaml_tag = 'Course'
 
-    def setup_gitlab_group(self, groups):
-        try:
-            found = groups.list(search=self.name)
-            return found[0]
-        except gitlab.exceptions.GitlabHttpError as e:
-            log.info(e)
-            if e.response_code == 404:
-                gl.groups.create({})
-                path = self.name.replace(' ', '_').lower()
-                group =  gl.groups.create({
-                    'name': self.name,
-                    'path': path
-                })
-                for repo in self.repos:
-                    group.repos.create({
-                        'name': repo,
-                        'namespace_id': group.path,
-                        'visibility': 'internal'
-                    })
-                return group
-            else:
-                raise e
-
-    def __init__(self, name, deadlines, repos):
+    def __init__(self, name, base, ldap, deadlines):
         self.name = name
-        self.repos = repos
+        self.base = base
+        self.ldap = ldap
         self.deadlines = deadlines
 
-    def projects(self, groups):
-        return groups.list(search=self.name)[0].projects.list()
+    def create_group(self, gl):
+        path = self.name.replace(' ', '_').lower()
+        self.group = gl.groups.create({
+            'name': self.name,
+            'path': path
+        })
+        return self.group
 
 
 class Student():
@@ -78,83 +63,87 @@ class Student():
         self.name = name
         self.group = group
 
-    def setup_project(self, base, course):
-        """Create user projects as forks from course/solutions in namespace of
-        course and add user as developer (NOT master) user should not be able
-        to modify protected TAG or force-push on protected branch users can
-        later invite other users into their projects"""
-
-        fork = course.group.projects.list(name=self.user)
-        if len(fork) == 0:
-            fork = base.forks.create({
-                'name': self.user,
-                'namespace': base.namspace,
-                'visibility': 'private'
-            })
-
-        fork.members.create({
-            'user_id': self.user,
-            'access_level': gitlab.DEVELOPER_ACCESS
-        })
-
-        return fork
-
-    def setup_ldap_dummy(self, users, provider, basedn):
-        # TODO call from creation of student object()
-
-        """Creates a dummy user for users that do not exist in gitlab
-        but in LDAP and have not logged in yet"""
-
-        users = users.list(search=self.user)
-
-        if len(users) == 0:
-            dummy = users.create({
-                'email': self.email,
-                'username': self.name,
-                'name': self.user,
-                'provider': provider,
-                'skip_confirmation': True,
-                'extern_uid': 'uid=%s,%s' % (self.user, basedn),
-                'password': secrets.token_urlsafe(nbytes=32)
-            })
-
-            return dummy
-        else:
-            return users[0]
-
     def from_csv(csvfile):
         reader = csv.DictReader(csvfile, delimiter=';', quotechar='"')
 
         for line in reader:
-            student = Student(line['Nutzernamen'],
-                              line['E-Mail'],
-                              line['Vorname'] + ' ' + line['Nachname'],
-                              line['Gruppe'])
-            yield student
+            yield Student(line['Nutzernamen'], line['E-Mail'], line['Vorname']
+                          + ' ' + line['Nachname'], line['Gruppe'])
+
+    def create_user(self, gl, ldap):
+        """Creates a dummy user for users that do not exist in gitlab
+        but in LDAP and have not logged in yet"""
+
+        return gl.users.create({
+            'email': self.email,
+            'username': self.name,
+            'name': self.user,
+            'provider': ldap['provider'],
+            'skip_confirmation': True,
+            'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
+            'password': secrets.token_urlsafe(nbytes=32)
+        })
 
 
-def create_students(gl, conf, args):
-    with open(args.students[0], 'r') as csvfile:
-        for student in Student.from_csv(csvfile):
-            student.setup_ldap_dummy(gl.users, conf['ldap']['provider'], conf['ldap']['basedn'])
-            student.setup_project('solutions', args['course'][0]) #TODO
-            print(student)
+def fork_project(gl, group, base, user):
+    """Create user projects as forks from course/solutions in namespace of
+    course and add user as developer (NOT master) user should not be able
+    to modify protected TAG or force-push on protected branch users can
+    later invite other users into their projects"""
+
+    # fork course base project (e.g. solutions)
+    fork = base.forks.create({
+        'name': user['name'],
+        'namespace': group.namspace,
+        'visibility': 'private'
+    })
+
+    # add student as member of project
+    fork.members.create({
+        'user_id': user,
+        'access_level': gitlab.DEVELOPER_ACCESS
+    })
+
+    return fork
 
 
-def create_courses(gl, conf, args):
-    for course in conf['courses']:
-        course.setup_gitlab_group(gl.groups)
-        print(course)
+def create_project(group, name):
+    return group.projects.create({
+        'name': name,
+        'namespace_id': group.path,
+        'visibility': 'internal'
+    })
 
 
-def create_deadlines(gl, conf, args):
-    for course in conf['courses']:
-        for deadline in course.deadlines:
-            pass
-            #if deadline.time <= datetime.datetime.now():
-                # deadline has approached
-                # TODO setup cronjob?
-                # deadline.tag(project)
+def deadlines(gl, course, args):
+    """Checks deadlines for course and triggers deadline if it is reached"""
+
+    for deadline in course.deadlines:
+        if deadline.test():
+            deadline.trigger(course)
+
+
+def sync(gl, courses, args):
+    """Sync groups and students from Stud.IP to Gitlab and create student
+    projects
+
+    one-way sync!!!
+    """
+
+    for course in courses:
+        course.create_group(gl)
+        create_project(course.group)
+
+        with open(args.students[0]) as csvfile:
+            for student in Student.from_csv(csvfile):
+                student.create_user(gl, course.ldap)
+
+
+def parseconf(conf):
+    """Reads courses from config file"""
+
+    with open(args.config, 'r') as conf:
+        return yaml.safe_load(conf)
 
 
 if __name__ == '__main__':
@@ -163,21 +152,23 @@ if __name__ == '__main__':
     gl.auth()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, nargs=1, help='path to config file', default='config.yml')
+    parser.add_argument(
+        '--config', type=str, nargs=1, help='path to config file',
+        default='config.yml')
+    subparsers = parser.add_subparsers(title='subcommands')
 
-    course_parser = parser.add_subparsers('courses')
-    course_parser.set_defaults(func=create_courses)
+    sync_parser = subparsers.add_parser(
+        'sync',
+        description='students and courses from Stud.IP and LDAP')
+    sync_parser.set_defaults(func=sync)
+    sync_parser.add_argument('--students', nargs=1,
+                             description='Students CSV file')
 
-    student_parser = parser.add_subparsers('students')
-    student_parser.add_argument('students', desc='Exported CSV file from Stud.IP', nargs=1, type=str)
-    student_parser.add_argument('course', desc='Course for CSV file', nargs=1, type=str)
-    student_parser.set_defaults(func=create_students)
-
-    deadline_parser = parser.add_subparsers('deadlines')
-    deadline_parser.set_defaults(func=create_deadlines)
+    deadline_parser = subparsers.add_parser('deadlines',
+                                            description='trigger deadlines')
+    deadline_parser.set_defaults(func=deadlines)
 
     args = parser.parse_args()
+    conf = parseconf(args.conf)
 
-    with open(args.config, 'r') as conf:
-        conf = yaml.safe_load(conf)
-        args.func(gl, conf, args)
+    args.func(gl, conf, args)
