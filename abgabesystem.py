@@ -44,13 +44,29 @@ class Course(yaml.YAMLObject):
         self.base = base
         self.deadlines = deadlines
 
-    def create_group(self, gl):
+    def sync_group(self, gl):
+        found = gl.groups.list(search=self.name)
+        if len(found) > 0:
+            return found[0]
+
         path = self.name.replace(' ', '_').lower()
-        self.group = gl.groups.create({
+        group = gl.groups.create({
             'name': self.name,
-            'path': path
+            'path': path,
+            'visibility': 'internal'
         })
-        return self.group
+        return group
+
+    def sync_projects(self, gl):
+        found = self.group.projects.list(search=self.base)
+        if len(found) > 0:
+            return found[0]
+
+        return gl.projects.create({
+            'name': self.base,
+            'namespace_id': self.group.id,
+            'visibility': 'internal'
+        })
 
 
 class Student():
@@ -69,14 +85,18 @@ class Student():
             yield Student(line['Nutzernamen'], line['E-Mail'], line['Vorname']
                           + ' ' + line['Nachname'], line['Gruppe'])
 
-    def create_user(self, gl, ldap):
+    def sync_user(self, gl, ldap):
         """Creates a dummy user for users that do not exist in gitlab
         but in LDAP and have not logged in yet"""
 
+        found = gl.users.list(search=self.user)
+        if len(found) > 0:
+            return found
+
         return gl.users.create({
             'email': self.email,
-            'username': self.name,
-            'name': self.user,
+            'username': self.user,
+            'name': self.name,
             'provider': ldap['provider'],
             'skip_confirmation': True,
             'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
@@ -106,14 +126,6 @@ def fork_project(gl, group, base, user):
     return fork
 
 
-def create_project(group, name):
-    return group.projects.create({
-        'name': name,
-        'namespace_id': group.path,
-        'visibility': 'internal'
-    })
-
-
 def deadlines(gl, course, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
@@ -130,19 +142,22 @@ def sync(gl, conf, args):
     """
 
     for course in conf['courses']:
-        course.create_group(gl)
-        create_project(course.group)
+        course.group = course.sync_group(gl)
+        project = course.sync_projects(gl)
 
-        with open(args.students[0]) as csvfile:
+        with open(args.students[0], encoding='latin1') as csvfile:
             for student in Student.from_csv(csvfile):
-                student.create_user(gl, conf['ldap'])
+                try:
+                    student.sync_user(gl, conf['ldap'])
+                except gitlab.exceptions.GitlabCreateError:
+                    log.warn('Failed to create %s' % student.user)
 
 
 def parseconf(conf):
     """Reads courses from config file"""
 
     with open(args.config, 'r') as conf:
-        return yaml.safe_load(conf)
+        return yaml.load(conf)
 
 
 if __name__ == '__main__':
@@ -158,16 +173,18 @@ if __name__ == '__main__':
 
     sync_parser = subparsers.add_parser(
         'sync',
-        description='students and courses from Stud.IP and LDAP')
+        help='students and courses from Stud.IP and LDAP')
+    sync_parser.add_argument('students', nargs=1, help='Students CSV file')
     sync_parser.set_defaults(func=sync)
-    sync_parser.add_argument('--students', nargs=1,
-                             description='Students CSV file')
 
     deadline_parser = subparsers.add_parser('deadlines',
                                             description='trigger deadlines')
     deadline_parser.set_defaults(func=deadlines)
 
     args = parser.parse_args()
-    conf = parseconf(args.conf)
+    conf = parseconf(args.config)
 
-    args.func(gl, conf, args)
+    if 'func' in args:
+        args.func(gl, conf, args)
+    else:
+        parser.print_help()
