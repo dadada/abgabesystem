@@ -22,13 +22,10 @@ class Deadline(yaml.YAMLObject):
     def trigger(self, project):
         """Create protected tag on ref"""
 
-        try:
-            project.tags.create({
-                'tag_name': self.tag,
-                'ref': self.ref
-            })
-        except gitlab.exceptions.GitlabHttpError as e:
-            log.warn(e)
+        project.tags.create({
+            'tag_name': self.tag,
+            'ref': self.ref
+        })
 
     def test(self):
         return self.time <= datetime.datetime.now()
@@ -59,14 +56,12 @@ class Course(yaml.YAMLObject):
 
     def sync_projects(self, gl):
         found = self.group.projects.list(search=self.base)
-        if len(found) > 0:
-            return found[0]
-
-        return gl.projects.create({
-            'name': self.base,
-            'namespace_id': self.group.id,
-            'visibility': 'internal'
-        })
+        if len(found) == 0:
+            gl.projects.create({
+                'name': self.base,
+                'namespace_id': self.group.id,
+                'visibility': 'internal'
+            })
 
 
 class Student():
@@ -91,7 +86,7 @@ class Student():
 
         found = gl.users.list(search=self.user)
         if len(found) > 0:
-            return found
+            return found[0]
 
         return gl.users.create({
             'email': self.email,
@@ -104,26 +99,30 @@ class Student():
         })
 
 
-def fork_project(gl, group, base, user):
+def sync_project(gl, course, student):
     """Create user projects as forks from course/solutions in namespace of
     course and add user as developer (NOT master) user should not be able
     to modify protected TAG or force-push on protected branch users can
     later invite other users into their projects"""
 
-    # fork course base project (e.g. solutions)
-    fork = base.forks.create({
-        'name': user['name'],
-        'namespace': group.namspace,
-        'visibility': 'private'
+    base = course.group.projects.list(search=course.base)[0]
+    base = gl.projects.get(base.id)
+
+    project = gl.projects.create({
+        'namespace_id': course.group.id,
+        'name': student.user.username,
+        'path': student.user.username
     })
 
     # add student as member of project
-    fork.members.create({
-        'user_id': user,
+    project.members.create({
+        'user_id': student.user.id,
         'access_level': gitlab.DEVELOPER_ACCESS
     })
 
-    return fork
+    project.create_fork_relation(base.id)
+
+    return project
 
 
 def deadlines(gl, course, args):
@@ -131,7 +130,11 @@ def deadlines(gl, course, args):
 
     for deadline in course.deadlines:
         if deadline.test():
-            deadline.trigger(course)
+            for project in course.group.projects.list():
+                try:
+                    deadline.trigger(project)
+                except gitlab.exceptions.GitlabHttpError as e:
+                    log.warn(e)
 
 
 def sync(gl, conf, args):
@@ -143,14 +146,15 @@ def sync(gl, conf, args):
 
     for course in conf['courses']:
         course.group = course.sync_group(gl)
-        project = course.sync_projects(gl)
+        course.sync_projects(gl)
 
         with open(args.students[0], encoding='latin1') as csvfile:
             for student in Student.from_csv(csvfile):
                 try:
-                    student.sync_user(gl, conf['ldap'])
-                except gitlab.exceptions.GitlabCreateError:
-                    log.warn('Failed to create %s' % student.user)
+                    student.user = student.sync_user(gl, conf['ldap'])
+                    sync_project(gl, course, student)
+                except gitlab.exceptions.GitlabCreateError as e:
+                    log.warn(e)
 
 
 def parseconf(conf):
