@@ -7,6 +7,7 @@ import datetime
 import logging as log
 import csv
 import secrets
+import time
 
 
 class Deadline(yaml.YAMLObject):
@@ -136,6 +137,12 @@ def sync_project(gl, course, student):
     # tmp TODO
     #for project in student.user.projects.list():
     #    gl.projects.delete(project.id)
+
+    print(student.user.name)
+    projects = course.group.projects.list(search=student.user.name)
+    if len(projects) > 0:
+        print('found')
+        return projects[0]
 
     base = course.group.projects.list(search=course.base)[0]
     base = gl.projects.get(base.id)
