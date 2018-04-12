@@ -4,13 +4,19 @@ ldap:
 courses:
   - !!python/object:abgabesystem.Course
     name: Programmieren 1
-    base: solutions
+    base: programmieren_1_solutions
+    students: List_of_groups_Lecture_Programmieren_1.csv
     deadlines:
-      - !!python/object:abgabesystem.Deadline
-        tag: Exercise 1
-        time: !!timestamp 2018-04-01
-        ref: master
-      - !!python/object:abgabesystem.Deadline
-        tag: Exercise 2
-        time: !!timestamp 2018-04-15
-        ref: master
+#      - !!python/object:abgabesystem.Deadline
+#        tag: Exercise 1
+#        time: !!timestamp 2018-04-01
+#        ref: master
+  - !!python/object:abgabesystem.Course
+    name: Programmieren 2
+    base: programmieren_2_solutions
+    students: List_of_groups_Lecture_Programmieren_2.csv
+    deadlines:
+#      - !!python/object:abgabesystem.Deadline
+#        tag: Exercise 1
+#        time: !!timestamp 2018-04-01
+#        ref: master

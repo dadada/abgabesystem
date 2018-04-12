@@ -22,6 +22,7 @@ class Deadline(yaml.YAMLObject):
     def trigger(self, project):
         """Create protected tag on ref"""
 
+        log.info('Creating tag %s' % self.tag)
         project.tags.create({
             'tag_name': self.tag,
             'ref': self.ref
@@ -36,17 +37,24 @@ class Course(yaml.YAMLObject):
 
     yaml_tag = 'Course'
 
-    def __init__(self, name, base, deadlines):
+    def __init__(self, name, base, deadlines, studentsfile):
         self.name = name
         self.base = base
         self.deadlines = deadlines
+        self.students = studentsfile
 
     def sync_group(self, gl):
         found = gl.groups.list(search=self.name)
+        print(found)
+
         if len(found) > 0:
-            return found[0]
+            for g in found:
+                if g.name == self.name:
+                    log.info('Found existing group %s' % found[0].name)
+                    return g
 
         path = self.name.replace(' ', '_').lower()
+        log.info('%s: Creating group' % self.name)
         group = gl.groups.create({
             'name': self.name,
             'path': path,
@@ -57,11 +65,24 @@ class Course(yaml.YAMLObject):
     def sync_projects(self, gl):
         found = self.group.projects.list(search=self.base)
         if len(found) == 0:
-            gl.projects.create({
+            project = gl.projects.create({
                 'name': self.base,
                 'namespace_id': self.group.id,
                 'visibility': 'internal'
             })
+            log.info('%s: Created project base repo' % self.name)
+            data = {
+                'branch': 'master',
+                'commit_message': 'Initial commit',
+                'actions': [
+                    {
+                        'action': 'create',
+                        'file_path': 'README.md',
+                        'content': 'README'
+                    }
+                ]
+            }
+            project.commits.create(data)
 
 
 class Student():
@@ -85,18 +106,25 @@ class Student():
         but in LDAP and have not logged in yet"""
 
         found = gl.users.list(search=self.user)
+        user = None
         if len(found) > 0:
-            return found[0]
+            user = found[0]
+        else:
+            log.info('Creating student %s' % self.user)
+            user = gl.users.create({
+                'email': self.email,
+                'username': self.user,
+                'name': self.name,
+                'provider': ldap['provider'],
+                'skip_confirmation': True,
+                'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
+                'password': secrets.token_urlsafe(nbytes=32)
+            })
+        # group is stored in custom attribute
+        # https://docs.gitlab.com/ee/api/custom_attributes.html
+        user.customattributes.set('group', self.group)
 
-        return gl.users.create({
-            'email': self.email,
-            'username': self.user,
-            'name': self.name,
-            'provider': ldap['provider'],
-            'skip_confirmation': True,
-            'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
-            'password': secrets.token_urlsafe(nbytes=32)
-        })
+        return user
 
 
 def sync_project(gl, course, student):
@@ -105,22 +133,28 @@ def sync_project(gl, course, student):
     to modify protected TAG or force-push on protected branch users can
     later invite other users into their projects"""
 
+    # tmp TODO
+    #for project in student.user.projects.list():
+    #    gl.projects.delete(project.id)
+
     base = course.group.projects.list(search=course.base)[0]
     base = gl.projects.get(base.id)
 
-    project = gl.projects.create({
-        'namespace_id': course.group.id,
-        'name': student.user.username,
-        'path': student.user.username
+    log.info('Creating project %s' % student.user)
+    fork = base.forks.create({
+        'namespace': student.user.username,
+        'name': student.name
     })
-
-    # add student as member of project
+    project = gl.projects.get(fork.id)
+    project.path = student.user.username
+    #project.name = student.name
+    project.visibility = 'private'
+    project.save()
+    course.group.transfer_project(to_project_id=fork.id)
     project.members.create({
         'user_id': student.user.id,
         'access_level': gitlab.DEVELOPER_ACCESS
     })
-
-    project.create_fork_relation(base.id)
 
     return project
 
@@ -148,8 +182,10 @@ def sync(gl, conf, args):
         course.group = course.sync_group(gl)
         course.sync_projects(gl)
 
-        with open(args.students[0], encoding='latin1') as csvfile:
+        with open(course.students, encoding='latin1') as csvfile:
             for student in Student.from_csv(csvfile):
+
+                print(course, student)
                 try:
                     student.user = student.sync_user(gl, conf['ldap'])
                     sync_project(gl, course, student)
@@ -168,6 +204,7 @@ if __name__ == '__main__':
 
     gl = gitlab.Gitlab.from_config()
     gl.auth()
+    log.info('authenticated')
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -178,7 +215,6 @@ if __name__ == '__main__':
     sync_parser = subparsers.add_parser(
         'sync',
         help='students and courses from Stud.IP and LDAP')
-    sync_parser.add_argument('students', nargs=1, help='Students CSV file')
     sync_parser.set_defaults(func=sync)
 
     deadline_parser = subparsers.add_parser('deadlines',
@@ -187,6 +223,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     conf = parseconf(args.config)
+
+    log.basicConfig(filename='example.log', filemode='w', level=log.DEBUG)
 
     if 'func' in args:
         args.func(gl, conf, args)
