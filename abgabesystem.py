@@ -7,6 +7,7 @@ import datetime
 import logging as log
 import csv
 import secrets
+import time
 
 
 class Deadline(yaml.YAMLObject):
@@ -37,9 +38,10 @@ class Course(yaml.YAMLObject):
 
     yaml_tag = 'Course'
 
-    def __init__(self, name, base, deadlines, studentsfile):
+    def __init__(self, name, base, plagiates, deadlines, studentsfile):
         self.name = name
         self.base = base
+        self.plagiates = plagiates
         self.deadlines = deadlines
         self.students = studentsfile
 
@@ -62,10 +64,10 @@ class Course(yaml.YAMLObject):
         })
         return group
 
-    def sync_projects(self, gl):
+    def sync_base(self, gl):
         found = self.group.projects.list(search=self.base)
         if len(found) == 0:
-            project = gl.projects.create({
+            self.base = gl.projects.create({
                 'name': self.base,
                 'namespace_id': self.group.id,
                 'visibility': 'internal'
@@ -82,7 +84,45 @@ class Course(yaml.YAMLObject):
                     }
                 ]
             }
-            project.commits.create(data)
+            self.base.commits.create(data)
+
+    def sync_plagiates(self, gl):
+        found = self.group.projects.list(search=self.plagiates)
+        if len(found) == 0:
+            self.base = gl.projects.create({
+                'name': self.base,
+                'namespace_id': self.group.id,
+                'visibility': 'private'
+            })
+            log.info('%s: Created project plagiates repo' % self.name)
+
+        projects = self.group.projects.list()
+        """
+        add all projects in group as submodules
+        except plagiates itself
+        """
+        projects_list = ""
+
+        for project in projects:
+            if project.name != self.plagiates:
+                projects_list += '../%s\n' % project.name
+
+        data = {
+            'branch': 'master',
+            'commit_message': 'Add submodules',
+            'actions': [
+                {
+                    'action': 'create',
+                    'file_path': '.gitmodules',
+                    'content': projects_list
+                }
+            ]
+        }
+        self.plagiates.commits.create(data)
+
+    def sync_projects(self, gl):
+        self.sync_base(gl)
+        self.sync_plagiates(gl)
 
 
 class Student():
@@ -120,6 +160,7 @@ class Student():
                 'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
                 'password': secrets.token_urlsafe(nbytes=32)
             })
+        # TODO create groups for abgabegruppen
         # group is stored in custom attribute
         # https://docs.gitlab.com/ee/api/custom_attributes.html
         user.customattributes.set('group', self.group)
@@ -136,6 +177,12 @@ def sync_project(gl, course, student):
     # tmp TODO
     #for project in student.user.projects.list():
     #    gl.projects.delete(project.id)
+
+    print(student.user.name)
+    projects = course.group.projects.list(search=student.user.name)
+    if len(projects) > 0:
+        print('found')
+        return projects[0]
 
     base = course.group.projects.list(search=course.base)[0]
     base = gl.projects.get(base.id)
@@ -179,7 +226,7 @@ def sync(gl, conf, args):
 
     for course in conf['courses']:
         course.group = course.sync_group(gl)
-        course.sync_projects(gl)
+        course.sync_base(gl)
 
         with open(course.students, encoding='latin1') as csvfile:
             for student in Student.from_csv(csvfile):
@@ -190,6 +237,8 @@ def sync(gl, conf, args):
                     sync_project(gl, course, student)
                 except gitlab.exceptions.GitlabCreateError as e:
                     log.warn(e)
+
+        course.sync_plagiates(gl)
 
 
 def parseconf(conf):

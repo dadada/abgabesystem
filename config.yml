@@ -5,6 +5,7 @@ courses:
   - !!python/object:abgabesystem.Course
     name: Programmieren 1
     base: programmieren_1_solutions
+    plagiates: programmieren_1_abgabesystem
     students: List_of_groups_Lecture_Programmieren_1.csv
     deadlines:
 #      - !!python/object:abgabesystem.Deadline
@@ -14,6 +15,8 @@ courses:
   - !!python/object:abgabesystem.Course
     name: Programmieren 2
     base: programmieren_2_solutions
+    plagiates: programmieren_2_abgabesystem
+
     students: List_of_groups_Lecture_Programmieren_2.csv
     deadlines:
 #      - !!python/object:abgabesystem.Deadline
