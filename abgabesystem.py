@@ -147,14 +147,13 @@ def sync_project(gl, course, student):
     })
     project = gl.projects.get(fork.id)
     project.path = student.user.username
-    #project.name = student.name
+    project.name = student.name
     project.visibility = 'private'
     project.save()
     course.group.transfer_project(to_project_id=fork.id)
-    project.members.create({
-        'user_id': student.user.id,
-        'access_level': gitlab.DEVELOPER_ACCESS
-    })
+    student_member = project.members.get(student.user.id)
+    student_member.access_level = gitlab.DEVELOPER_ACCESS 
+    student_member.save()
 
     return project
 
