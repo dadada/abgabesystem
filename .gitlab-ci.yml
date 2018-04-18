@@ -5,7 +5,8 @@ stages:
 create_tags:
   image: python:3
   stage: deadlines
-  only: master
+  only:
+    - master
 
   tags:
     - abgabesystem
