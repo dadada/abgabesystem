@@ -208,7 +208,7 @@ def sync_project(gl, course, student):
 def deadlines(gl, conf, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
-    for course in conf.courses:
+    for course in conf['courses']:
         for deadline in course.deadlines:
             if deadline.test():
                 for project in course.group.projects.list():
