@@ -5,12 +5,13 @@ stages:
 create_tags:
   image: python:3
   stage: deadlines
-  only: master
+  only:
+    - master
 
   tags:
     - abgabesystem
 
   script:
     - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
-    - pip install python-gitlab
-    - ./abgabesystem.py deadlines
+    - pip install -r requirements.txt
+    - python abgabesystem.py deadlines
