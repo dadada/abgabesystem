@@ -205,16 +205,17 @@ def sync_project(gl, course, student):
     return project
 
 
-def deadlines(gl, course, args):
+def deadlines(gl, conf, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
-    for deadline in course.deadlines:
-        if deadline.test():
-            for project in course.group.projects.list():
-                try:
-                    deadline.trigger(project)
-                except gitlab.exceptions.GitlabHttpError as e:
-                    log.warn(e)
+    for course in conf.courses:
+        for deadline in course.deadlines:
+            if deadline.test():
+                for project in course.group.projects.list():
+                    try:
+                        deadline.trigger(project)
+                    except gitlab.exceptions.GitlabHttpError as e:
+                        log.warn(e)
 
 
 def sync(gl, conf, args):
