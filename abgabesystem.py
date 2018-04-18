@@ -30,7 +30,7 @@ class Deadline(yaml.YAMLObject):
         })
 
     def test(self):
-        return self.time <= datetime.date.now()
+        return self.time <= datetime.datetime.now()
 
 
 class Course(yaml.YAMLObject):
