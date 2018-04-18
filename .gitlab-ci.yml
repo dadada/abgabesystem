@@ -13,5 +13,5 @@ create_tags:
 
   script:
     - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
-    - pip install python-gitlab
+    - pip install -r requirements.txt
     - python abgabesystem.py deadlines
