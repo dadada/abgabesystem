@@ -24,13 +24,18 @@ class Deadline(yaml.YAMLObject):
         """Create protected tag on ref"""
 
         log.info('Creating tag %s' % self.tag)
+        tags = project.tags.list(search=self.tag)
+        if len(tags) > 0:
+            print(tags)
+            return
+
         project.tags.create({
             'tag_name': self.tag,
             'ref': self.ref
         })
 
     def test(self):
-        return self.time <= datetime.datetime.now()
+        return self.time <= datetime.date.today()
 
 
 class Course(yaml.YAMLObject):
@@ -211,11 +216,12 @@ def deadlines(gl, conf, args):
     for course in conf['courses']:
         for deadline in course.deadlines:
             if deadline.test():
-                for project in course.group.projects.list():
-                    try:
-                        deadline.trigger(project)
-                    except gitlab.exceptions.GitlabHttpError as e:
-                        log.warn(e)
+                group = gl.groups.list(search=course.name)[0]
+                course.group = gl.groups.get(group.id)
+                for project in course.group.projects.list(all=True):
+                    project = gl.projects.get(project.id)
+                    print(project.name)
+                    deadline.trigger(project)
 
 
 def sync(gl, conf, args):
