@@ -92,10 +92,11 @@ class Course(yaml.YAMLObject):
             self.base.commits.create(data)
 
     def sync_plagiates(self, gl):
+        self.group = self.sync_group(gl)
         found = self.group.projects.list(search=self.plagiates)
         if len(found) == 0:
             self.base = gl.projects.create({
-                'name': self.base,
+                'name': self.plagiates,
                 'namespace_id': self.group.id,
                 'visibility': 'private'
             })
@@ -110,7 +111,10 @@ class Course(yaml.YAMLObject):
 
         for project in projects:
             if project.name != self.plagiates:
-                projects_list += '../%s\n' % project.name
+                projects_list += '''
+                [submodule "%s"]
+                    path = "%s"
+                    url = ../%s''' % (project.path, project.path)
 
         data = {
             'branch': 'master',
@@ -183,8 +187,7 @@ def sync_project(gl, course, student):
     #for project in student.user.projects.list():
     #    gl.projects.delete(project.id)
 
-    print(student.user.name)
-    projects = course.group.projects.list(search=student.user.name)
+    projects = course.group.projects.list(search=student.user.username)
     if len(projects) > 0:
         print('found')
         return projects[0]
@@ -192,14 +195,14 @@ def sync_project(gl, course, student):
     base = course.group.projects.list(search=course.base)[0]
     base = gl.projects.get(base.id)
 
-    log.info('Creating project %s' % student.user)
+    log.info('Creating project %s' % student.user.username)
     fork = base.forks.create({
         'namespace': student.user.username,
-        'name': student.name
+        'name': student.user.username
     })
     project = gl.projects.get(fork.id)
     project.path = student.user.username
-    project.name = student.name
+    project.name = student.user.username
     project.visibility = 'private'
     project.save()
     course.group.transfer_project(to_project_id=fork.id)
@@ -232,20 +235,22 @@ def sync(gl, conf, args):
     """
 
     for course in conf['courses']:
+        print(course.name)
         course.group = course.sync_group(gl)
         course.sync_base(gl)
 
         with open(course.students, encoding='latin1') as csvfile:
             for student in Student.from_csv(csvfile):
+                print(student.user)
 
-                print(course, student)
                 try:
                     student.user = student.sync_user(gl, conf['ldap'])
+                    print("%s %s" % (student.user.username, student.user.name))
                     sync_project(gl, course, student)
                 except gitlab.exceptions.GitlabCreateError as e:
                     log.warn(e)
 
-        course.sync_plagiates(gl)
+        #course.sync_plagiates(gl)
 
 
 def parseconf(conf):
