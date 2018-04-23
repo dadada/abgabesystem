@@ -1,6 +1,12 @@
 stages:
+  - sync
   - deadlines
   - plagiates
+
+before_script:
+  - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
+  - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
+  - pip install -r requirements.txt
 
 create_tags:
   image: python:3
@@ -12,7 +18,16 @@ create_tags:
     - abgabesystem
 
   script:
-    - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
-    - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
-    - pip install -r requirements.txt
     - python abgabesystem.py deadlines
+
+sync_students:
+  image: python:3
+  stage: sync
+  only:
+    - master
+
+  tags:
+    - abgabesystem
+
+  script:
+    - python abgabesystem.py sync
