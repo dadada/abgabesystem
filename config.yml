@@ -12,6 +12,10 @@ courses:
         tag: test
         time: !!timestamp 2018-04-18
         ref: master
+      - !!python/object:abgabesystem.Deadline
+        tag: blatt1
+        time: !!timestamp 2018-04-29
+        ref: master
   - !!python/object:abgabesystem.Course
     name: Programmieren 2
     base: programmieren_2_solutions
