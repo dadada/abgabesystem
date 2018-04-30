@@ -1,5 +1,4 @@
 stages:
-  - sync
   - deadlines
   - plagiates
 
@@ -19,15 +18,3 @@ create_tags:
 
   script:
     - python abgabesystem.py deadlines
-
-sync_students:
-  image: python:3
-  stage: sync
-  only:
-    - master
-
-  tags:
-    - abgabesystem
-
-  script:
-    - python abgabesystem.py sync
