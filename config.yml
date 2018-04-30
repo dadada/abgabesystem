@@ -8,10 +8,6 @@ courses:
     students: List_of_groups_Lecture_Programmieren_1.csv
     deadlines:
       - !!python/object:abgabesystem.Deadline
-        tag: test
-        time: !!timestamp 2018-04-18
-        ref: master
-      - !!python/object:abgabesystem.Deadline
         tag: blatt1
         time: !!timestamp 2018-04-29
         ref: master
