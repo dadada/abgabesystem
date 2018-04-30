@@ -23,7 +23,6 @@ class Deadline(yaml.YAMLObject):
         """Create protected tag on ref"""
 
         print('Creating tag %s' % self.tag)
-        tags = project.tags.list(search=self.tag)
 
         project.tags.create({
             'tag_name': self.tag,
@@ -200,14 +199,17 @@ def deadlines(gl, conf, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
     for course in conf['courses']:
-        for deadline in course.deadlines:
-            if deadline.test():
-                group = gl.groups.list(search=course.name)[0]
-                course.group = gl.groups.get(group.id)
-                for project in course.group.projects.list(all=True):
-                    project = gl.projects.get(project.id)
-                    print(project.name)
-                    deadline.trigger(project)
+        group = gl.groups.list(search=course.name)[0]
+        course.group = gl.groups.get(group.id)
+        for project in course.group.projects.list(all=True):
+            project = gl.projects.get(project.id)
+            print(project.name)
+            for deadline in course.deadlines:
+                if deadline.test():
+                    try:
+                        deadline.trigger(project)
+                    except gitlab.exceptions.GitlabCreateError as e:
+                        print(e)
 
 
 def sync(gl, conf, args):
