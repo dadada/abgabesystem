@@ -22,11 +22,8 @@ class Deadline(yaml.YAMLObject):
     def trigger(self, project):
         """Create protected tag on ref"""
 
-        log.info('Creating tag %s' % self.tag)
+        print('Creating tag %s' % self.tag)
         tags = project.tags.list(search=self.tag)
-        if len(tags) > 0:
-            print(tags)
-            return
 
         project.tags.create({
             'tag_name': self.tag,
