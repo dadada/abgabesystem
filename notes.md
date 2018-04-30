@@ -60,3 +60,4 @@
   + running jplag
 
 - script for creating repos and groups
+- SSH deploy key

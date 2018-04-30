@@ -7,7 +7,6 @@ import datetime
 import logging as log
 import csv
 import secrets
-import time
 
 
 class Deadline(yaml.YAMLObject):
@@ -91,47 +90,32 @@ class Course(yaml.YAMLObject):
             }
             self.base.commits.create(data)
 
-    def sync_plagiates(self, gl):
+    def sync_plagiates(self, gl, ref):
+        """Does not work"""
+        pass
+
         self.group = self.sync_group(gl)
         found = self.group.projects.list(search=self.plagiates)
         if len(found) == 0:
-            self.base = gl.projects.create({
+            self.plagiates = gl.projects.create({
                 'name': self.plagiates,
                 'namespace_id': self.group.id,
                 'visibility': 'private'
             })
             log.info('%s: Created project plagiates repo' % self.name)
+        else:
+            self.plagiates = gl.projects.get(found[0].id)
 
         projects = self.group.projects.list()
-        """
-        add all projects in group as submodules
-        except plagiates itself
-        """
-        projects_list = ""
 
         for project in projects:
-            if project.name != self.plagiates:
-                projects_list += '''
-                [submodule "%s"]
-                    path = "%s"
-                    url = ../%s''' % (project.path, project.path)
-
-        data = {
-            'branch': 'master',
-            'commit_message': 'Add submodules',
-            'actions': [
-                {
-                    'action': 'create',
-                    'file_path': '.gitmodules',
-                    'content': projects_list
-                }
-            ]
-        }
-        self.plagiates.commits.create(data)
+            if project.name != self.plagiates.name:
+                # TODO
+                pass
+                plagiates.add_submodule(project)
 
     def sync_projects(self, gl):
         self.sync_base(gl)
-        self.sync_plagiates(gl)
 
 
 class Student():
@@ -210,6 +194,8 @@ def sync_project(gl, course, student):
     student_member.access_level = gitlab.DEVELOPER_ACCESS 
     student_member.save()
 
+    project.keys.create({'title': 'abgabesystem', 'key': open('abgabesystem.key.pub').read()})
+
     return project
 
 
@@ -250,13 +236,29 @@ def sync(gl, conf, args):
                 except gitlab.exceptions.GitlabCreateError as e:
                     log.warn(e)
 
-        #course.sync_plagiates(gl)
+
+def plagiates(gl, conf, args):
+    for course in conf['courses']:
+        course.sync_plagiates(gl, args.exercise)
+
+
+def list_projects(gl, conf, args):
+    for course in conf['courses']:
+        groups = gl.groups.list(search=course.name)
+        if len(groups) == 0:
+            pass
+        group = groups[0]
+        if group.path != args.course[0]:
+            pass
+        for project in group.projects.list(all=True):
+            project = gl.projects.get(project.id)
+            print(project.ssh_clone_url)
 
 
 def parseconf(conf):
     """Reads courses from config file"""
 
-    with open(args.config, 'r') as conf:
+    with open(args.config[0], 'r') as conf:
         return yaml.load(conf)
 
 
@@ -269,7 +271,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--config', type=str, nargs=1, help='path to config file',
-        default='config.yml')
+        default=['config.yml'])
     subparsers = parser.add_subparsers(title='subcommands')
 
     sync_parser = subparsers.add_parser(
@@ -280,6 +282,14 @@ if __name__ == '__main__':
     deadline_parser = subparsers.add_parser('deadlines',
                                             description='trigger deadlines')
     deadline_parser.set_defaults(func=deadlines)
+
+    plagiates_parser = subparsers.add_parser('plagiates', description='sync plagiates')
+    plagiates_parser.set_defaults(func=plagiates)
+    plagiates_parser.add_argument('exercise', default='master')
+
+    projects_parser = subparsers.add_parser('projects', description='list projects for course')
+    projects_parser.set_defaults(func=list_projects)
+    projects_parser.add_argument('course')
 
     args = parser.parse_args()
     conf = parseconf(args.config)
