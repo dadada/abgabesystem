@@ -242,16 +242,15 @@ def plagiates(gl, conf, args):
 
 
 def list_projects(gl, conf, args):
-    for course in conf['courses']:
-        groups = gl.groups.list(search=course.name)
-        if len(groups) == 0:
-            pass
-        group = groups[0]
-        if group.path != args.course[0]:
-            pass
-        for project in group.projects.list(all=True):
-            project = gl.projects.get(project.id)
-            print(project.ssh_clone_url)
+    groups = gl.groups.list(search=args.course)
+    print(groups)
+    if len(groups) == 0:
+        pass
+    for g in groups:
+        if (g.name == args.course):
+            for project in g.projects.list(all=True):
+                project = gl.projects.get(project.id)
+                print(project.ssh_url_to_repo)
 
 
 def parseconf(conf):
