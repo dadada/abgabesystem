@@ -8,6 +8,8 @@ import logging as log
 import csv
 import secrets
 
+from time import sleep
+
 
 class Deadline(yaml.YAMLObject):
     """A deadline"""
@@ -168,31 +170,34 @@ def sync_project(gl, course, student):
     #    gl.projects.delete(project.id)
 
     projects = course.group.projects.list(search=student.user.username)
-    if len(projects) > 0:
-        print('found')
-        return projects[0]
+    project = None
+    if len(projects) == 0:
+        base = course.group.projects.list(search=course.base)[0]
+        base = gl.projects.get(base.id)
 
-    base = course.group.projects.list(search=course.base)[0]
-    base = gl.projects.get(base.id)
+        log.info('Creating project %s' % student.user.username)
+        fork = base.forks.create({
+            'namespace': student.user.username,
+            'name': student.user.username
+        })
+        project = gl.projects.get(fork.id)
+        project.path = student.user.username
+        project.name = student.user.username
+        project.visibility = 'private'
+        project.save()
+        course.group.transfer_project(to_project_id=fork.id)
+    else:
+        project = gl.projects.get(id=projects[0].id)
 
-    log.info('Creating project %s' % student.user.username)
-    fork = base.forks.create({
-        'namespace': student.user.username,
-        'name': student.user.username
-    })
-    project = gl.projects.get(fork.id)
-    project.path = student.user.username
-    project.name = student.user.username
-    project.visibility = 'private'
-    project.save()
-    course.group.transfer_project(to_project_id=fork.id)
-    student_member = project.members.get(student.user.id)
-    student_member.access_level = gitlab.DEVELOPER_ACCESS 
-    student_member.save()
-
+    try:
+        student_member = project.members.get(student.user.id)
+        student_member.access_level = gitlab.DEVELOPER_ACCESS 
+        student_member.save()
+    except gitlab.exceptions.GitlabGetError as e:
+        student_member = project.members.create({'user_id': student.user.id, 'access_level':
+                                                 gitlab.DEVELOPER_ACCESS})
     project.keys.create({'title': 'abgabesystem', 'key': open('abgabesystem.key.pub').read()})
-
-    return project
+    project.save()
 
 
 def deadlines(gl, conf, args):
