@@ -8,8 +8,6 @@ import logging as log
 import csv
 import secrets
 
-from time import sleep
-
 
 class Deadline(yaml.YAMLObject):
     """A deadline"""
@@ -197,6 +195,8 @@ def sync_project(gl, course, student):
         student_member = project.members.create({'user_id': student.user.id, 'access_level':
                                                  gitlab.DEVELOPER_ACCESS})
     project.keys.create({'title': 'abgabesystem', 'key': open('abgabesystem.key.pub').read()})
+    project.container_registry_enabled = False
+    project.lfs_enabled = False
     project.save()
 
 

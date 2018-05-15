@@ -68,7 +68,7 @@ gitlab_rails['gitlab_email_reply_to'] = 'noreply@ips1.ibr.cs.tu-bs.de'
 # gitlab_rails['gitlab_default_projects_features_wiki'] = true
 # gitlab_rails['gitlab_default_projects_features_snippets'] = true
 # gitlab_rails['gitlab_default_projects_features_builds'] = true
-# gitlab_rails['gitlab_default_projects_features_container_registry'] = true
+gitlab_rails['gitlab_default_projects_features_container_registry'] = false
 
 ### Automatic issue closing
 ###! See https://docs.gitlab.com/ce/customization/issue_closing.html for more
