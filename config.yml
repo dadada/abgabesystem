@@ -3,20 +3,11 @@ ldap:
   provider: main
 courses:
   - !!python/object:abgabesystem.Course
-    name: Programmieren 1
-    base: programmieren_1_solutions
-    students: List_of_groups_Lecture_Programmieren_1.csv
+    name: test_course
+    base: test_base
+    students: Students.csv
     deadlines:
       - !!python/object:abgabesystem.Deadline
-        tag: blatt1
+        tag: test_deadline
         time: !!timestamp 2018-04-29
-        ref: master
-  - !!python/object:abgabesystem.Course
-    name: Programmieren 2
-    base: programmieren_2_solutions
-    students: List_of_groups_Lecture_Programmieren_2.csv
-    deadlines:
-      - !!python/object:abgabesystem.Deadline
-        tag: Test
-        time: !!timestamp 2018-04-19
         ref: master
