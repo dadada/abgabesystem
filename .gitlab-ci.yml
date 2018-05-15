@@ -38,7 +38,7 @@ sync:
     - abgabesystem
 
   script:
-    python abgabesystem.py sync
+    - python abgabesystem.py sync
 
   only:
     - master
