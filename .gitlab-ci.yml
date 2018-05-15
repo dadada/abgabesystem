@@ -1,20 +1,44 @@
+image: $CI_REGISTRY/abgabesystem/abgabesystem:latest
+
+variables:
+  BASECODE: test_solutions
+
 stages:
+  - sync
   - deadlines
   - plagiates
 
 before_script:
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
   - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
-  - pip install -r requirements.txt
 
-create_tags:
-  image: python:3
+deadlines:
   stage: deadlines
-  only:
-    - master
-
   tags:
     - abgabesystem
 
   script:
-    - python abgabesystem.py deadlines
+    - python abgabesystem.py deadline $CI_COMMIT_REF_NAME
+
+plagiates:
+  stage: plagiates
+  tags:
+    - abgabesystem
+
+  script:
+    - python abgabesystem.py plagiates $CI_COMMIT_REF_NAME
+
+  artifacts:
+    paths:
+    - results/
+
+sync:
+  stage: sync
+  tags:
+    - abgabesystem
+
+  script:
+    python abgabesystem.py sync
+
+  only:
+    - master

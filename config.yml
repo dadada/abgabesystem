@@ -1,13 +1,8 @@
 ldap:
   basedn: "ou=people,dc=tu-bs,dc=de"
   provider: main
-courses:
-  - !!python/object:abgabesystem.Course
-    name: test_course
-    base: test_base
-    students: Students.csv
-    deadlines:
-      - !!python/object:abgabesystem.Deadline
-        tag: test_deadline
-        time: !!timestamp 2018-04-29
-        ref: master
+course:
+  !!python/object:abgabesystem.Course
+  name: test_course
+  base: test_base
+  students: Students.csv

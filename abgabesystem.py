@@ -3,34 +3,11 @@
 import argparse
 import yaml
 import gitlab
-import datetime
 import logging as log
 import csv
 import secrets
-
-
-class Deadline(yaml.YAMLObject):
-    """A deadline"""
-
-    yaml_tag = 'Deadline'
-
-    def __init__(self, tag, time, ref):
-        self.tag = tag
-        self.time = time
-        self.ref = ref
-
-    def trigger(self, project):
-        """Create protected tag on ref"""
-
-        print('Creating tag %s' % self.tag)
-
-        project.tags.create({
-            'tag_name': self.tag,
-            'ref': self.ref
-        })
-
-    def test(self):
-        return self.time < datetime.date.today()
+import subprocess
+import os
 
 
 class Course(yaml.YAMLObject):
@@ -85,30 +62,6 @@ class Course(yaml.YAMLObject):
                 ]
             }
             self.base.commits.create(data)
-
-    def sync_plagiates(self, gl, ref):
-        """Does not work"""
-        pass
-
-        self.group = self.sync_group(gl)
-        found = self.group.projects.list(search=self.plagiates)
-        if len(found) == 0:
-            self.plagiates = gl.projects.create({
-                'name': self.plagiates,
-                'namespace_id': self.group.id,
-                'visibility': 'private'
-            })
-            log.info('%s: Created project plagiates repo' % self.name)
-        else:
-            self.plagiates = gl.projects.get(found[0].id)
-
-        projects = self.group.projects.list()
-
-        for project in projects:
-            if project.name != self.plagiates.name:
-                # TODO
-                pass
-                plagiates.add_submodule(project)
 
     def sync_projects(self, gl):
         self.sync_base(gl)
@@ -200,21 +153,15 @@ def sync_project(gl, course, student):
     project.save()
 
 
-def deadlines(gl, conf, args):
-    """Checks deadlines for course and triggers deadline if it is reached"""
+def create_tag(project, tag, ref):
+    """Create protected tag on ref"""
 
-    for course in conf['courses']:
-        group = gl.groups.list(search=course.name)[0]
-        course.group = gl.groups.get(group.id)
-        for project in course.group.projects.list(all=True):
-            project = gl.projects.get(project.id)
-            print(project.name)
-            for deadline in course.deadlines:
-                if deadline.test():
-                    try:
-                        deadline.trigger(project)
-                    except gitlab.exceptions.GitlabCreateError as e:
-                        print(e)
+    print('Project %s. Creating tag %s' % (project.name, tag))
+
+    project.tags.create({
+        'tag_name': tag,
+        'ref': ref
+    })
 
 
 def sync(gl, conf, args):
@@ -224,30 +171,23 @@ def sync(gl, conf, args):
     one-way sync!!!
     """
 
-    for course in conf['courses']:
-        print(course.name)
-        course.group = course.sync_group(gl)
-        course.sync_base(gl)
+    course = conf['course']
+    print(course.name)
+    course.group = course.sync_group(gl)
+    course.sync_base(gl)
 
-        with open(course.students, encoding='latin1') as csvfile:
-            for student in Student.from_csv(csvfile):
-                print(student.user)
-
-                try:
-                    student.user = student.sync_user(gl, conf['ldap'])
-                    print("%s %s" % (student.user.username, student.user.name))
-                    sync_project(gl, course, student)
-                except gitlab.exceptions.GitlabCreateError as e:
-                    log.warn(e)
-
-
-def plagiates(gl, conf, args):
-    for course in conf['courses']:
-        course.sync_plagiates(gl, args.exercise)
+    with open(course.students, encoding='latin1') as csvfile:
+        for student in Student.from_csv(csvfile):
+            try:
+                student.user = student.sync_user(gl, conf['ldap'])
+                print("%s %s" % (student.user.username, student.user.name))
+                sync_project(gl, course, student)
+            except gitlab.exceptions.GitlabCreateError as e:
+                log.warn(e)
 
 
 def list_projects(gl, conf, args):
-    groups = gl.groups.list(search=args.course)
+    groups = gl.groups.list(search=conf['course']['name'])
     print(groups)
     if len(groups) == 0:
         pass
@@ -258,8 +198,46 @@ def list_projects(gl, conf, args):
                 print(project.ssh_url_to_repo)
 
 
+def get_base_project(gl, conf, args):
+    return conf['course']['base']
+
+
+def deadline(gl, conf, args):
+    """Checks deadlines for course and triggers deadline if it is reached"""
+
+    deadline_name = args.deadline_name
+    course = conf['course']
+    group = gl.groups.list(search=course.name)[0]
+    course.group = gl.groups.get(group.id)
+    for project in course.group.projects.list(all=True):
+        project = gl.projects.get(project.id)
+        print(project.name)
+        try:
+            create_tag(project, deadline_name, 'master')
+        except gitlab.exceptions.GitlabCreateError as e:
+            print(e)
+
+
+def plagiates(gl, conf, args):
+    groups = gl.groups.list(search=conf['course']['name'])
+    tag = args.deadline_name
+    print(groups)
+    if len(groups) == 0:
+        pass
+    for g in groups:
+        if g.name == args.course:
+            os.mkdir('results')
+            for project in g.projects.list(all=True):
+                project = gl.projects.get(project.id)
+                subprocess.run(
+                    ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, 'repos'])
+
+            subprocess.run(
+                ['java', '-jar', '/jplag/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', '$BASECODE', '-l', 'java18'])
+
+
 def parseconf(conf):
-    """Reads courses from config file"""
+    """Reads course from config file"""
 
     with open(args.config[0], 'r') as conf:
         return yaml.load(conf)
@@ -282,17 +260,17 @@ if __name__ == '__main__':
         help='students and courses from Stud.IP and LDAP')
     sync_parser.set_defaults(func=sync)
 
-    deadline_parser = subparsers.add_parser('deadlines',
-                                            description='trigger deadlines')
-    deadline_parser.set_defaults(func=deadlines)
-
-    plagiates_parser = subparsers.add_parser('plagiates', description='sync plagiates')
-    plagiates_parser.set_defaults(func=plagiates)
-    plagiates_parser.add_argument('exercise', default='master')
-
-    projects_parser = subparsers.add_parser('projects', description='list projects for course')
+    projects_parser = subparsers.add_parser(
+        'projects',
+        description='list projects for course')
     projects_parser.set_defaults(func=list_projects)
     projects_parser.add_argument('course')
+
+    deadline_parser = subparsers.add_parser(
+        'deadline',
+        description='set tags at deadline')
+    deadline_parser.set_defaults(func=deadline)
+    deadline_parser.add_argument('deadline_name')
 
     args = parser.parse_args()
     conf = parseconf(args.config)
