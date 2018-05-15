@@ -4,7 +4,6 @@ variables:
   BASECODE: test_solutions
 
 stages:
-  - sync
   - deadlines
   - plagiates
 
