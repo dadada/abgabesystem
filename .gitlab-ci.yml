@@ -18,7 +18,7 @@ deadlines:
     - abgabesystem
 
   script:
-    - python abgabesystem.py deadline $CI_COMMIT_REF_NAME
+    - python3 abgabesystem.py deadline $CI_COMMIT_REF_NAME
 
 plagiates:
   stage: plagiates
@@ -26,7 +26,7 @@ plagiates:
     - abgabesystem
 
   script:
-    - python abgabesystem.py plagiates $CI_COMMIT_REF_NAME
+    - python3 abgabesystem.py plagiates $CI_COMMIT_REF_NAME
 
   artifacts:
     paths:
@@ -38,7 +38,7 @@ sync:
     - abgabesystem
 
   script:
-    - python abgabesystem.py sync
+    - python3 abgabesystem.py sync
 
   only:
     - master
