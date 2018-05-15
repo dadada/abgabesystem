@@ -187,7 +187,7 @@ def sync(gl, conf, args):
 
 
 def list_projects(gl, conf, args):
-    groups = gl.groups.list(search=conf['course']['name'])
+    groups = gl.groups.list(search=conf['course'].name)
     print(groups)
     if len(groups) == 0:
         pass
@@ -205,7 +205,7 @@ def get_base_project(gl, conf, args):
 def deadline(gl, conf, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
-    deadline_name = args.deadline_name
+    deadline_name = args.tag_name
     course = conf['course']
     group = gl.groups.list(search=course.name)[0]
     course.group = gl.groups.get(group.id)
@@ -219,21 +219,29 @@ def deadline(gl, conf, args):
 
 
 def plagiates(gl, conf, args):
-    groups = gl.groups.list(search=conf['course']['name'])
-    tag = args.deadline_name
+    groups = gl.groups.list(search=conf['course'].name)
+    tag = args.tag_name
     print(groups)
     if len(groups) == 0:
         pass
     for g in groups:
-        if g.name == args.course:
-            os.mkdir('results')
+        if g.name == conf['course'].name:
+            try:
+                os.mkdir('repos')
+            except os.FileExistsError as e:
+                print(e)
+            os.chdir('repos')
             for project in g.projects.list(all=True):
                 project = gl.projects.get(project.id)
-                subprocess.run(
-                    ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, 'repos'])
+                try:
+                    subprocess.run(
+                        ['git', 'clone', '--branch', tag, project.ssh_url_to_repo])
+                except subprocess.CalledProcessError as e:
+                    print(e)
 
+            os.chdir('..')
             subprocess.run(
-                ['java', '-jar', '/jplag/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', '$BASECODE', '-l', 'java18'])
+                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', '$BASECODE', '-l', 'java18'])
 
 
 def parseconf(conf):
@@ -270,7 +278,13 @@ if __name__ == '__main__':
         'deadline',
         description='set tags at deadline')
     deadline_parser.set_defaults(func=deadline)
-    deadline_parser.add_argument('deadline_name')
+    deadline_parser.add_argument('tag_name')
+
+    plagiates_parser = subparsers.add_parser(
+        'plagiates',
+        description='set tags at plagiates')
+    plagiates_parser.set_defaults(func=plagiates)
+    plagiates_parser.add_argument('tag_name')
 
     args = parser.parse_args()
     conf = parseconf(args.config)
