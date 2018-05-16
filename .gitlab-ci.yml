@@ -20,6 +20,9 @@ deadlines:
   script:
     - python3 abgabesystem.py deadline $CI_COMMIT_REF_NAME
 
+  only:
+    - tags
+
 plagiates:
   stage: plagiates
   tags:
@@ -31,6 +34,9 @@ plagiates:
   artifacts:
     paths:
     - results/
+
+  only:
+    - tags
 
 sync:
   stage: sync
