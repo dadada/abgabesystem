@@ -48,3 +48,6 @@ sync:
 
   only:
     - master
+
+  except:
+    - tags
