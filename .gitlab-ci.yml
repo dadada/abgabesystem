@@ -38,6 +38,7 @@ plagiates:
     - abgabesystem
 
   script:
+    - mkdir -p results
     - python3 abgabesystem.py plagiates $CI_COMMIT_REF_NAME
 
   artifacts:
