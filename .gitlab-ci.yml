@@ -2,6 +2,7 @@ image: $CI_REGISTRY/abgabesystem/abgabesystem:latest
 
 variables:
   BASECODE: test_solutions
+  CI_REPO_HOST: ips1.ibr.cs.tu-bs.de
 
 stages:
   - sync
@@ -15,7 +16,7 @@ before_script:
   - mkdir -p ~/.ssh
   - chmod 700 ~/.ssh
   - ssh-add -l
-  - ssh-keyscan $CI_SERVER_NAME | tee ~/.ssh/known_hosts
+  - ssh-keyscan $CI_REPO_HOST | tee ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
   ## get API token from secret variable
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
