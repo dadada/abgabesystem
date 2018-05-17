@@ -241,7 +241,7 @@ def plagiates(gl, conf, args):
 
             os.chdir('..')
             subprocess.run(
-                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', '$BASECODE', '-l', 'java18'])
+                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', '$BASECODE', '-l', 'java17'])
 
 
 def parseconf(conf):

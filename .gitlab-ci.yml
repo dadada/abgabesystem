@@ -9,6 +9,12 @@ stages:
   - plagiates
 
 before_script:
+  ## get ssh private key from secret variable
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  ## get API token from secret variable
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
   - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
 
