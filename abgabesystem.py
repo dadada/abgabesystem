@@ -147,7 +147,14 @@ def sync_project(gl, course, student):
     except gitlab.exceptions.GitlabGetError as e:
         student_member = project.members.create({'user_id': student.user.id, 'access_level':
                                                  gitlab.DEVELOPER_ACCESS})
-    project.keys.create({'title': 'abgabesystem', 'key': open('abgabesystem.key.pub').read()})
+    deploy_key = None
+    for k in gl.deploykeys.list():
+        if k.key == course.deploy_key:
+            deploy_key = k
+    if deploy_key is None:
+        print('Missing deploy key. Add global deploy key and sync again')
+    else:
+        project.keys.enable(deploy_key.id)
     project.container_registry_enabled = False
     project.lfs_enabled = False
     project.save()
