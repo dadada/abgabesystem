@@ -5,15 +5,15 @@
 1.  Generate a deploy key and an API token.
 
 2.  Set up container images and runners.
-   - [checkstyle]()
-   - [abgabesystem]()
+   - [checkstyle](https://ips1.ibr.cs.tu-bs.de/abgabesystem/abgabesystem)
+   - [abgabesystem](https://ips1.ibr.cs.tu-bs.de/abgabesystem/docker-abgabesystem)
 
 3.  Create a group for you course and add all administrative users to it.
 
-4.  Clone [abgabesystem]() as a private project of that group and add
+4.  Clone [abgabesystem](https://ips1.ibr.cs.tu-bs.de/abgabesystem/docker-abgabesystem) as a private project of that group and add
 SSH_PRIVATE_KEY and PRIVATE_API_TOKEN to the private variables.
 
-5.  Edit [config.yml]() to include the name of the student list, your public
+5.  Edit [config.yml](blob/master/config.yml) to include the name of the student list, your public
 deploy key and the name of the course.
 
 6.  Export student list from StudIP and add it to the project.
@@ -44,7 +44,7 @@ can not force push tag and commits to protected branches (master)
 To trigger the deadline of an exercise (e.g. Sunday at 15:00), push a tag 
 (e.g. ex1) to the cloned Abgabesystem project. The Abgabesystem's CI jobs 
 creates a tag of this name inside each student's project and then proceeds 
-by creating a checkout of each project's repository and running [JPlag]() to 
+by creating a checkout of each project's repository and running [JPlag](https://github.com/jplag/jplag) to 
 check for plagiates. The results can be found inside the job artefacts for the 
 CI job that is run for the tag. The results are saved for each tag and can be 
 downloaded as an archive.
