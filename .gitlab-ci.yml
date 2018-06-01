@@ -1,4 +1,4 @@
-image: $CI_REGISTRY/abgabesystem/abgabesystem:latest
+image: $CI_REGISTRY/abgabesystem/docker-abgabesystem:latest
 
 variables:
   BASECODE: test_solutions
