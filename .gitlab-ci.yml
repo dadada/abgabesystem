@@ -5,6 +5,7 @@ variables:
   CI_REPO_HOST: ips1.ibr.cs.tu-bs.de
 
 stages:
+  - test
   - sync
   - deadlines
   - plagiates
@@ -62,3 +63,11 @@ sync:
 
   except:
     - tags
+
+doc:
+  stage: test
+  tags:
+    - abgabesystem
+
+  script:
+    - make html
