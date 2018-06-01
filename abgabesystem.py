@@ -11,18 +11,23 @@ import os
 
 
 class Course(yaml.YAMLObject):
-    """A course"""
+    """Group for a course
+
+    - name:     name of the course
+    - base:     the project containig the official solutions
+    - students: path to the CSV file that can be exported from Stud.IP
+    """
 
     yaml_tag = 'Course'
 
-    def __init__(self, name, base, plagiates, deadlines, studentsfile):
+    def __init__(self, name, base, studentsfile):
         self.name = name
         self.base = base
-        self.plagiates = plagiates
-        self.deadlines = deadlines
         self.students = studentsfile
 
     def sync_group(self, gl):
+        """Creates the group for the course
+        """
         found = gl.groups.list(search=self.name)
         print(found)
 
@@ -42,6 +47,16 @@ class Course(yaml.YAMLObject):
         return group
 
     def sync_base(self, gl):
+        """Creates the project containig the official solutions
+
+        All student projects will fork from this projects and can be updated using
+
+        ```
+        git remote add upstream <base-url>.gitlab
+        git pull upstream master
+        ```
+        """
+
         found = self.group.projects.list(search=self.base)
         if len(found) == 0:
             self.base = gl.projects.create({
@@ -63,12 +78,14 @@ class Course(yaml.YAMLObject):
             }
             self.base.commits.create(data)
 
-    def sync_projects(self, gl):
-        self.sync_base(gl)
-
 
 class Student():
-    """A student"""
+    """A Gitlab user
+
+    Students are read from the CSV file that was exported from Stud.IP.
+    For each user, a dummy LDAP user is created in Gitlab.
+    Upon the first login Gitlab fetches the complete user using LDAP.
+    """
 
     def __init__(self, user, mail, name, group):
         self.user = user
@@ -77,6 +94,7 @@ class Student():
         self.group = group
 
     def from_csv(csvfile):
+        """Creates an iterable containing the users"""
         reader = csv.DictReader(csvfile, delimiter=';', quotechar='"')
 
         for line in reader:
@@ -102,9 +120,6 @@ class Student():
                 'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
                 'password': secrets.token_urlsafe(nbytes=32)
             })
-        # TODO create groups for abgabegruppen
-        # group is stored in custom attribute
-        # https://docs.gitlab.com/ee/api/custom_attributes.html
         user.customattributes.set('group', self.group)
 
         return user
@@ -115,10 +130,6 @@ def sync_project(gl, course, student):
     course and add user as developer (NOT master) user should not be able
     to modify protected TAG or force-push on protected branch users can
     later invite other users into their projects"""
-
-    # tmp TODO
-    #for project in student.user.projects.list():
-    #    gl.projects.delete(project.id)
 
     projects = course.group.projects.list(search=student.user.username)
     project = None
@@ -161,7 +172,11 @@ def sync_project(gl, course, student):
 
 
 def create_tag(project, tag, ref):
-    """Create protected tag on ref"""
+    """Creates protected tag on ref
+
+    The tag is used by the abgabesystem to mark the state of a solution at the
+    deadline
+    """
 
     print('Project %s. Creating tag %s' % (project.name, tag))
 
@@ -172,10 +187,8 @@ def create_tag(project, tag, ref):
 
 
 def sync(gl, conf, args):
-    """Sync groups and students from Stud.IP to Gitlab and create student
+    """Syncs groups and students from Stud.IP to Gitlab and create student
     projects
-
-    one-way sync!!!
     """
 
     course = conf['course']
@@ -194,6 +207,8 @@ def sync(gl, conf, args):
 
 
 def list_projects(gl, conf, args):
+    """Prints all git URLs for the student's projects
+    """
     groups = gl.groups.list(search=conf['course'].name)
     print(groups)
     if len(groups) == 0:
@@ -206,6 +221,8 @@ def list_projects(gl, conf, args):
 
 
 def get_base_project(gl, conf, args):
+    """The project of a course containing the official solutions"""
+
     return conf['course']['base']
 
 
@@ -226,6 +243,10 @@ def deadline(gl, conf, args):
 
 
 def plagiates(gl, conf, args):
+    """Runs the plagiarism checker (JPlag) for the solutions and a given tag
+    name
+    """
+
     groups = gl.groups.list(search=conf['course'].name)
     tag = args.tag_name
     print(groups)
