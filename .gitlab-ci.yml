@@ -71,3 +71,7 @@ doc:
 
   script:
     - make html
+
+  artifacts:
+    paths:
+    - _build/html/
