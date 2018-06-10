@@ -231,7 +231,10 @@ def deadline(gl, conf, args):
 
     deadline_name = args.tag_name
     course = conf['course']
-    group = gl.groups.list(search=course.name)[0]
+    group = None
+    for g in gl.groups.list(search=course.name):
+        if g.name == conf['course'].name:
+            group = gl.groups.list(search=course.name)[0]
     course.group = gl.groups.get(group.id)
     for project in course.group.projects.list(all=True):
         project = gl.projects.get(project.id)
