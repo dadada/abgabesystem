@@ -16,14 +16,16 @@ class Course(yaml.YAMLObject):
     - name:     name of the course
     - base:     the project containig the official solutions
     - students: path to the CSV file that can be exported from Stud.IP
+    - deploy_key: a deploy key for deploying student repos to CI jobs
     """
 
     yaml_tag = 'Course'
 
-    def __init__(self, name, base, studentsfile):
+    def __init__(self, name, studentsfile, deploy_key):
         self.name = name
-        self.base = base
+        self.base = 'solutions'
         self.students = studentsfile
+        self.deploy_key = deploy_key
 
     def sync_group(self, gl):
         """Creates the group for the course
@@ -52,7 +54,7 @@ class Course(yaml.YAMLObject):
         All student projects will fork from this projects and can be updated using
 
         ```
-        git remote add upstream <base-url>.gitlab
+        git remote add upstream <base-url>
         git pull upstream master
         ```
         """
@@ -117,7 +119,7 @@ class Student():
                 'name': self.name,
                 'provider': ldap['provider'],
                 'skip_confirmation': True,
-                'extern_uid': 'uid=%s,%s' % (self.user, ldap['basedn']),
+                'extern_uid': 'uid=%s,%s' % (self.user, ldap['main']['base']),
                 'password': secrets.token_urlsafe(nbytes=32)
             })
         user.customattributes.set('group', self.group)
@@ -158,14 +160,12 @@ def sync_project(gl, course, student):
     except gitlab.exceptions.GitlabGetError as e:
         student_member = project.members.create({'user_id': student.user.id, 'access_level':
                                                  gitlab.DEVELOPER_ACCESS})
-    deploy_key = None
-    for k in gl.deploykeys.list():
-        if k.key == course.deploy_key:
-            deploy_key = k
-    if deploy_key is None:
-        print('Missing deploy key. Add global deploy key and sync again')
-    else:
-        project.keys.enable(deploy_key.id)
+    deploy_key = project.keys.create({
+        'title': course.name,
+        'key': course.deploy_key
+    })
+
+    project.keys.enable(deploy_key.id)
     project.container_registry_enabled = False
     project.lfs_enabled = False
     project.save()

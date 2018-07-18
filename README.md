@@ -1,25 +1,24 @@
-# The Abgabesystem
+# The abgabesystem
 
 ## Setup
 
-0. Configure gitlab with your LDAP configuration.
+0. Optional: If you have not previously set up GitLab for the abgabesystem, you can use the playbook in playbook.yml to setup your instance.
 
-1.  Generate a deploy key and an API token.
+1. Create a new group with the name of the course.
 
-2.  Set up container images and runners.
-   - [checkstyle](https://ips1.ibr.cs.tu-bs.de/abgabesystem/checkstyle)
-   - [abgabesystem](https://ips1.ibr.cs.tu-bs.de/abgabesystem/abgabesystem)
+2. Create a fork of abgabesystem inside that group.
 
-3.  Create a group for your course and add all administrative users to it.
+3. Configure config.yml and generate an SSH key pair.
+   Add the private key to the fork as the secret variable SSH_PRIVATE_KEY.
+   Add the public key to config.yml as deploy_key.
 
-4.  Clone [abgabesystem](https://ips1.ibr.cs.tu-bs.de/abgabesystem/docker-abgabesystem) as a private project of that group and add SSH_PRIVATE_KEY and PRIVATE_API_TOKEN to the private variables.
+4. Export the student list from StudIP and add it to the project.
 
-5.  Edit [config.yml](blob/master/config.yml) to include the name of the student list, your public
-deploy key and the name of the course.
+5. Create an API key with admin access and add it to the fork as the secret variable PRIVATE_API_TOKEN.
 
-6.  Export student list from StudIP and add it to the project.
+6. Add all administrative users to the group of your course (but not the students).
 
-7.  wait for ci jobs to finish....
+The CI jobs should then create the student repositories.
 
 ## Recommended settings for gitlab.rb
 
