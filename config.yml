@@ -1,6 +1,5 @@
 ldap:
-  main:
-    base: 'ou=people,dc=tu-bs,dc=de'
+  base: 'ou=people,dc=tu-bs,dc=de'
   provider: main
 course:
   !!python/object:abgabesystem.Course

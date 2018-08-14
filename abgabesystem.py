@@ -1,84 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import yaml
 import gitlab
 import logging as log
 import csv
 import secrets
 import subprocess
 import os
-
-
-class Course(yaml.YAMLObject):
-    """Group for a course
-
-    - name:     name of the course
-    - base:     the project containig the official solutions
-    - students: path to the CSV file that can be exported from Stud.IP
-    - deploy_key: a deploy key for deploying student repos to CI jobs
-    """
-
-    yaml_tag = 'Course'
-
-    def __init__(self, name, studentsfile, deploy_key):
-        self.name = name
-        self.base = 'solutions'
-        self.students = studentsfile
-        self.deploy_key = deploy_key
-
-    def sync_group(self, gl):
-        """Creates the group for the course
-        """
-        found = gl.groups.list(search=self.name)
-        print(found)
-
-        if len(found) > 0:
-            for g in found:
-                if g.name == self.name:
-                    log.info('Found existing group %s' % found[0].name)
-                    return g
-
-        path = self.name.replace(' ', '_').lower()
-        log.info('%s: Creating group' % self.name)
-        group = gl.groups.create({
-            'name': self.name,
-            'path': path,
-            'visibility': 'internal'
-        })
-        return group
-
-    def sync_base(self, gl):
-        """Creates the project containig the official solutions
-
-        All student projects will fork from this projects and can be updated using
-
-        ```
-        git remote add upstream <base-url>
-        git pull upstream master
-        ```
-        """
-
-        found = self.group.projects.list(search=self.base)
-        if len(found) == 0:
-            self.base = gl.projects.create({
-                'name': self.base,
-                'namespace_id': self.group.id,
-                'visibility': 'internal'
-            })
-            log.info('%s: Created project base repo' % self.name)
-            data = {
-                'branch': 'master',
-                'commit_message': 'Initial commit',
-                'actions': [
-                    {
-                        'action': 'create',
-                        'file_path': 'README.md',
-                        'content': 'README'
-                    }
-                ]
-            }
-            self.base.commits.create(data)
 
 
 class Student():
@@ -103,73 +31,6 @@ class Student():
             yield Student(line['Nutzernamen'], line['E-Mail'], line['Vorname']
                           + ' ' + line['Nachname'], line['Gruppe'])
 
-    def sync_user(self, gl, ldap):
-        """Creates a dummy user for users that do not exist in gitlab
-        but in LDAP and have not logged in yet"""
-
-        found = gl.users.list(search=self.user)
-        user = None
-        if len(found) > 0:
-            user = found[0]
-        else:
-            log.info('Creating student %s' % self.user)
-            user = gl.users.create({
-                'email': self.email,
-                'username': self.user,
-                'name': self.name,
-                'provider': ldap['provider'],
-                'skip_confirmation': True,
-                'extern_uid': 'uid=%s,%s' % (self.user, ldap['main']['base']),
-                'password': secrets.token_urlsafe(nbytes=32)
-            })
-        user.customattributes.set('group', self.group)
-
-        return user
-
-
-def sync_project(gl, course, student):
-    """Create user projects as forks from course/solutions in namespace of
-    course and add user as developer (NOT master) user should not be able
-    to modify protected TAG or force-push on protected branch users can
-    later invite other users into their projects"""
-
-    projects = course.group.projects.list(search=student.user.username)
-    project = None
-    if len(projects) == 0:
-        base = course.group.projects.list(search=course.base)[0]
-        base = gl.projects.get(base.id)
-
-        log.info('Creating project %s' % student.user.username)
-        fork = base.forks.create({
-            'namespace': student.user.username,
-            'name': student.user.username
-        })
-        project = gl.projects.get(fork.id)
-        project.path = student.user.username
-        project.name = student.user.username
-        project.visibility = 'private'
-        project.save()
-        course.group.transfer_project(to_project_id=fork.id)
-    else:
-        project = gl.projects.get(id=projects[0].id)
-
-    try:
-        student_member = project.members.get(student.user.id)
-        student_member.access_level = gitlab.DEVELOPER_ACCESS 
-        student_member.save()
-    except gitlab.exceptions.GitlabGetError as e:
-        student_member = project.members.create({'user_id': student.user.id, 'access_level':
-                                                 gitlab.DEVELOPER_ACCESS})
-    deploy_key = project.keys.create({
-        'title': course.name,
-        'key': course.deploy_key
-    })
-
-    project.keys.enable(deploy_key.id)
-    project.container_registry_enabled = False
-    project.lfs_enabled = False
-    project.save()
-
 
 def create_tag(project, tag, ref):
     """Creates protected tag on ref
@@ -186,56 +47,159 @@ def create_tag(project, tag, ref):
     })
 
 
-def sync(gl, conf, args):
-    """Syncs groups and students from Stud.IP to Gitlab and create student
-    projects
+def get_students(gl, students_csv):
+    """Returns already existing GitLab users for students from provided CSV file that have an account.
     """
 
-    course = conf['course']
-    print(course.name)
-    course.group = course.sync_group(gl)
-    course.sync_base(gl)
+    for student in Student.from_csv(students_csv):
+        users = gl.users.list(search=student.user)
+        if len(users) > 0:
+            yield users[0]
 
-    with open(course.students, encoding='latin1') as csvfile:
-        for student in Student.from_csv(csvfile):
+
+def create_user(gl, student, ldap_base, ldap_provider):
+    """Creates a GitLab user account student.
+    Requires admin privileges.
+    """
+
+    user = gl.users.create({
+        'email': student.email,
+        'username': student.user,
+        'name': student.name,
+        'provider': ldap_provider,
+        'skip_confirmation': True,
+        'extern_uid': 'uid=%s,%s' % (student.user, ldap_base),
+        'password': secrets.token_urlsafe(nbytes=32)
+    })
+    user.customattributes.set('group', student.group)
+
+    return user
+
+
+def create_users(gl, args):
+    with open(args.students, encoding='iso8859') as students_csv:
+        for student in Student.from_csv(students_csv):
             try:
-                student.user = student.sync_user(gl, conf['ldap'])
-                print("%s %s" % (student.user.username, student.user.name))
-                sync_project(gl, course, student)
-            except gitlab.exceptions.GitlabCreateError as e:
-                log.warn(e)
+                create_user(gl, student, args.ldap_base, args.ldap_provider)
+            except gitlab.exceptions.GitlabCreateError:
+                log.warn('Failed to create user: %s' % student.user)
 
 
-def list_projects(gl, conf, args):
-    """Prints all git URLs for the student's projects
+def fork_reference(gl, reference, namespace, deploy_key):
+    """Create fork of solutions for student.
     """
-    groups = gl.groups.list(search=conf['course'].name)
-    print(groups)
-    if len(groups) == 0:
-        pass
-    for g in groups:
-        if (g.name == args.course):
-            for project in g.projects.list(all=True):
-                project = gl.projects.get(project.id)
-                print(project.ssh_url_to_repo)
+
+    fork = reference.forks.create({
+        'namespace': namespace.id
+    })
+    project = gl.projects.get(fork.id)
+    project.visibility = 'private'
+    project.container_registry_enabled = False
+    project.lfs_enabled = False
+    deploy_key = project.keys.create({
+        'title': "Deploy Key",
+        'key': deploy_key
+    })
+    project.keys.enable(deploy_key.id)
+    project.save()
+
+    return project
 
 
-def get_base_project(gl, conf, args):
-    """The project of a course containing the official solutions"""
+def create_project(gl, group, user, reference, deploy_key):
+    """Creates a namespace (subgroup) and forks the project with
+    the reference solutions into that namespace
+    """
 
-    return conf['course']['base']
+    subgroup = None
+
+    try:
+        subgroup = gl.groups.create({
+            'name': user.username,
+            'path': user.username,
+            'parent_id': group.id
+        })
+    except gitlab.exceptions.GitlabError as e:
+        subgroups = group.subgroups.list(search=user.username)
+        if len(subgroups) > 0 and subgroup[0].name == user.username:
+            subgroup = subgroups[0]
+            subgroup = gl.groups.get(subgroup.id, lazy=True)
+        else:
+            raise(e)
+    try:
+        subgroup.members.create({
+            'user_id': user.id,
+            'access_level': gitlab.DEVELOPER_ACCESS,
+        })
+    except gitlab.exceptions.GitlabError:
+        log.warning('Failed to add student %s to its own group' % user.username)
+
+    try:
+        fork_reference(gl, reference, subgroup, deploy_key)
+    except gitlab.exceptions.GitlabCreateError as e:
+        log.warning(e.error_message)
 
 
-def deadline(gl, conf, args):
+def setup_course(gl, group, students_csv, deploy_key):
+
+    solution = None
+    reference_project = None
+
+    try:
+        solution = gl.groups.create({
+            'name': 'solutions',
+            'path': 'solutions',
+            'parent_id': group.id,
+        })
+    except gitlab.exceptions.GitlabCreateError as e:
+        log.info('Failed to create solutions group. %s' % e.error_message)
+        solutions = group.subgroups.list(search='solutions')
+        if len(solutions) > 0 and solutions[0].name == 'solutions':
+            solution = gl.groups.get(solutions[0].id, lazy=True)
+        else:
+            raise(gitlab.exceptions.GitlabCreateError(error_message='Failed to setup solutions subgroup'))
+
+    try:
+        reference_project = gl.projects.create({
+            'name': 'solutions',
+            'namespace_id': solution.id
+        })
+    except gitlab.exceptions.GitlabCreateError as e:
+        log.info('Failed to setup group structure. %s' % e.error_message)
+        projects = solution.projects.list(search='solutions')
+        if len(projects) > 0 and projects[0].name == 'solutions':
+            reference_project = gl.projects.get(projects[0].id)
+        else:
+            raise(gitlab.exceptions.GitlabCreateError(error_message='Failed to setup reference solutions'))
+
+    if solution is None or reference_project is None:
+        raise(gitlab.exceptions.GitlabCreateError(error_message='Failed to setup course'))
+
+    for user in get_students(gl, students_csv):
+        create_project(gl, solution, user, reference_project, deploy_key)
+
+
+def projects(gl, args):
+    groups = gl.groups.list(search=args.course)
+    if len(groups) == 0 and groups[0].name == args.course:
+        log.warn('This group does not exist')
+    else:
+        group = groups[0]
+        with open(args.deploy_key, 'r') as key, open(args.students, encoding='iso8859') as students_csv:
+            key = key.read()
+            setup_course(gl, group, students_csv, key)
+
+
+def deadline(gl, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
     deadline_name = args.tag_name
-    course = conf['course']
+    course = args.course
     group = None
     for g in gl.groups.list(search=course.name):
-        if g.name == conf['course'].name:
+        if g.name == args.course:
             group = g
-    course.group = gl.groups.get(group.id)
+    group = gl.groups.get(group.id)
     for project in course.group.projects.list(all=True):
         project = gl.projects.get(project.id)
         print(project.name)
@@ -245,41 +209,44 @@ def deadline(gl, conf, args):
             print(e)
 
 
-def plagiates(gl, conf, args):
+def plagiates(gl, args):
     """Runs the plagiarism checker (JPlag) for the solutions and a given tag
     name
     """
 
-    groups = gl.groups.list(search=conf['course'].name)
+    groups = gl.groups.list(search=args.course)
     tag = args.tag_name
     print(groups)
     if len(groups) == 0:
         pass
     for g in groups:
-        if g.name == conf['course'].name:
+        if g.name == args.course:
             try:
                 os.mkdir('repos')
             except os.FileExistsError as e:
                 print(e)
             os.chdir('repos')
             for project in g.projects.list(all=True):
-                project = gl.projects.get(project.id)
+                project = gl.projects.get(project.id, lazy=True)
                 try:
                     subprocess.run(
                         ['git', 'clone', '--branch', tag, project.ssh_url_to_repo])
-                except subprocess.CalledProcessError as e:
                     print(e)
 
             os.chdir('..')
             subprocess.run(
-                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', conf['course'].base, '-l', 'java17'])
+                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
 
 
-def parseconf(conf):
-    """Reads course from config file"""
-
-    with open(args.config[0], 'r') as conf:
-        return yaml.load(conf)
+def course(gl, args):
+    try:
+        group = gl.groups.create({
+            'name': args.course,
+            'path': args.course
+        })
+        log.info('Created group %s' % args.course)
+    except gitlab.exceptions.GitlabCreateError as e:
+        log.warning('Failed to create group %s. %s' % (args.course, e.error_message))
 
 
 if __name__ == '__main__':
@@ -289,21 +256,29 @@ if __name__ == '__main__':
     log.info('authenticated')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config', type=str, nargs=1, help='path to config file',
-        default=['config.yml'])
     subparsers = parser.add_subparsers(title='subcommands')
 
-    sync_parser = subparsers.add_parser(
-        'sync',
-        help='students and courses from Stud.IP and LDAP')
-    sync_parser.set_defaults(func=sync)
+    user_parser = subparsers.add_parser(
+        'users',
+        help='Creates users from LDAP')
+    user_parser.set_defaults(func=create_users)
+    user_parser.add_argument('-s', '--students', dest='students')
+    user_parser.add_argument('-b', '--ldap-base', dest='ldap_base')
+    user_parser.add_argument('-p', '--ldap-provider', dest='ldap_provider')
+
+    course_parser = subparsers.add_parser(
+        'courses',
+        help='Create course')
+    course_parser.set_defaults(func=course)
+    course_parser.add_argument('-c', '--course', dest='course')
 
     projects_parser = subparsers.add_parser(
         'projects',
-        description='list projects for course')
-    projects_parser.set_defaults(func=list_projects)
-    projects_parser.add_argument('course')
+        help='Setup projects')
+    projects_parser.set_defaults(func=projects)
+    projects_parser.add_argument('-c', '--course', dest='course')
+    projects_parser.add_argument('-d', '--deploy-key', dest='deploy_key')
+    projects_parser.add_argument('-s', '--students', dest='students')
 
     deadline_parser = subparsers.add_parser(
         'deadline',
@@ -318,11 +293,10 @@ if __name__ == '__main__':
     plagiates_parser.add_argument('tag_name')
 
     args = parser.parse_args()
-    conf = parseconf(args.config)
 
     log.basicConfig(filename='example.log', filemode='w', level=log.DEBUG)
 
     if 'func' in args:
-        args.func(gl, conf, args)
+        args.func(gl, args)
     else:
         parser.print_help()

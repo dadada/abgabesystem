@@ -68,7 +68,7 @@ gitlab_rails['gitlab_email_reply_to'] = 'noreply@ips1.ibr.cs.tu-bs.de'
 # gitlab_rails['gitlab_default_projects_features_wiki'] = true
 # gitlab_rails['gitlab_default_projects_features_snippets'] = true
 # gitlab_rails['gitlab_default_projects_features_builds'] = true
-gitlab_rails['gitlab_default_projects_features_container_registry'] = false
+# gitlab_rails['gitlab_default_projects_features_container_registry'] = true
 
 ### Automatic issue closing
 ###! See https://docs.gitlab.com/ce/customization/issue_closing.html for more
@@ -214,7 +214,7 @@ main: # 'main' is the GitLab 'provider ID' of this LDAP server
 #    lowercase_usernames: false
 #    block_auto_created_users: false
     base: 'ou=people,dc=tu-bs,dc=de'
-    user_filter: '(ou=Student TU Braunschweig)'
+    #user_filter: '(ou=Student TU Braunschweig)'
 #     ## EE only
 #     group_base: ''
 #     admin_group: ''
