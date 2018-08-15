@@ -194,48 +194,42 @@ def deadline(gl, args):
     """Checks deadlines for course and triggers deadline if it is reached"""
 
     deadline_name = args.tag_name
-    course = args.course
-    group = None
-    for g in gl.groups.list(search=course.name):
-        if g.name == args.course:
-            group = g
-    group = gl.groups.get(group.id)
-    for project in course.group.projects.list(all=True):
-        project = gl.projects.get(project.id)
-        print(project.name)
-        try:
-            create_tag(project, deadline_name, 'master')
-        except gitlab.exceptions.GitlabCreateError as e:
-            print(e)
+    try:
+        reference = gl.projects.get(args.reference, lazy=True)
+
+        for fork in reference.forks.list():
+            project = gl.projects.get(fork.id, lazy=True)
+            try:
+                create_tag(project, deadline_name, 'master')
+            except gitlab.exceptions.GitlabCreateError as e:
+                print(e.error_message)
+
+    except gitlab.exceptions.GitlabGetError as e:
+        print(e.error_message)
 
 
 def plagiates(gl, args):
-    """Runs the plagiarism checker (JPlag) for the solutions and a given tag
-    name
+    """Runs the plagiarism checker (JPlag) for the solutions with a certain tag
     """
 
-    groups = gl.groups.list(search=args.course)
     tag = args.tag_name
-    print(groups)
-    if len(groups) == 0:
-        pass
-    for g in groups:
-        if g.name == args.course:
-            try:
-                os.mkdir('repos')
-            except os.FileExistsError as e:
-                print(e)
-            os.chdir('repos')
-            for project in g.projects.list(all=True):
-                project = gl.projects.get(project.id, lazy=True)
-                try:
-                    subprocess.run(
-                        ['git', 'clone', '--branch', tag, project.ssh_url_to_repo])
-                    print(e)
+    try:
+        reference = gl.projects.get(args.reference, lazy=True)
+        try:
+            os.mkdir('solutions')
+        except os.FileExistsError as e:
+            print(e)
+        os.chdir('solutions')
 
-            os.chdir('..')
-            subprocess.run(
-                ['java', '-jar', '/app/jplag.jar', '-s', 'repos', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
+        for fork in reference.forks.list():
+            project = gl.projects.get(fork.id, lazy=True)
+            try:
+                subprocess.run(
+                    ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, project.path_with_namespace])
+                os.chdir('..')
+
+        subprocess.run(
+            ['java', '-jar', args.jplag_jar, '-s', 'solutions', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
 
 
 def course(gl, args):
@@ -284,13 +278,16 @@ if __name__ == '__main__':
         'deadline',
         description='set tags at deadline')
     deadline_parser.set_defaults(func=deadline)
-    deadline_parser.add_argument('tag_name')
+    deadline_parser.add_argument('-t', '--tag-name', dest='tag_name')
+    deadline_parser.add_argument('-r', '--reference', dest='reference')
 
     plagiates_parser = subparsers.add_parser(
         'plagiates',
         description='set tags at plagiates')
     plagiates_parser.set_defaults(func=plagiates)
-    plagiates_parser.add_argument('tag_name')
+    plagiates_parser.add_argument('-t', '--tag-name', dest='tag_name')
+    plagiates_parser.add_argument('-r', '--reference', dest='reference')
+    plagiates_parser.add_argument('-j', '--jplag-jar', dest='jplag_jar')
 
     args = parser.parse_args()
 
