@@ -2,7 +2,7 @@ image: $CI_REGISTRY/abgabesystem/docker-abgabesystem:latest
 
 variables:
   BASECODE: solutions/solutions
-  CI_REPO_HOST: ips1.ibr.cs.tu-bs.de
+  CI_REPO_HOST: $CI_REGISTRY
 
 stages:
   - test
