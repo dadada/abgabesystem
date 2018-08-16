@@ -1,7 +1,7 @@
 image: $CI_REGISTRY/abgabesystem/docker-abgabesystem:latest
 
 variables:
-  BASECODE: test_solutions
+  BASECODE: solutions/solutions
   CI_REPO_HOST: ips1.ibr.cs.tu-bs.de
 
 stages:
@@ -29,7 +29,7 @@ deadlines:
     - abgabesystem
 
   script:
-    - python3 abgabesystem.py deadline $CI_COMMIT_REF_NAME
+    - python3 ./abgabesystem.py deadline -t test -r test_course/solutions/solutions
 
   only:
     - tags
@@ -41,27 +41,13 @@ plagiates:
 
   script:
     - mkdir -p results
-    - python3 abgabesystem.py plagiates $CI_COMMIT_REF_NAME
+    - python3 ./abgabesystem.py plagiates -t test -r test_course/solutions/solutions -j /app/jplag.jar
 
   artifacts:
     paths:
     - results/
 
   only:
-    - tags
-
-sync:
-  stage: sync
-  tags:
-    - abgabesystem
-
-  script:
-    - python3 abgabesystem.py sync
-
-  only:
-    - master
-
-  except:
     - tags
 
 doc:
