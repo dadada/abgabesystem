@@ -77,6 +77,8 @@ def create_user(gl, student, ldap_base, ldap_provider):
 
 
 def create_users(gl, args):
+    """Creates Gitlab users from exported students list
+    """
     with open(args.students, encoding='iso8859') as students_csv:
         for student in Student.from_csv(students_csv):
             try:
@@ -141,7 +143,8 @@ def create_project(gl, group, user, reference, deploy_key):
 
 
 def setup_course(gl, group, students_csv, deploy_key):
-
+    """Sets up the internal structure for the group for use with the course
+    """
     solution = None
     reference_project = None
 
@@ -193,6 +196,8 @@ def setup_course(gl, group, students_csv, deploy_key):
 
 
 def projects(gl, args):
+    """Creates the projects for all course participants
+    """
     groups = gl.groups.list(search=args.course)
     if len(groups) == 0 and groups[0].name == args.course:
         log.warn('This group does not exist')
@@ -247,6 +252,8 @@ def plagiates(gl, args):
 
 
 def course(gl, args):
+    """Creates the group for the course
+    """
     try:
         group = gl.groups.create({
             'name': args.course,
@@ -277,13 +284,13 @@ if __name__ == '__main__':
 
     course_parser = subparsers.add_parser(
         'courses',
-        help='Create course')
+        help='Creates a new course')
     course_parser.set_defaults(func=course)
     course_parser.add_argument('-c', '--course', dest='course')
 
     projects_parser = subparsers.add_parser(
         'projects',
-        help='Setup projects')
+        help='Sets up the projects and groups for a course')
     projects_parser.set_defaults(func=projects)
     projects_parser.add_argument('-c', '--course', dest='course')
     projects_parser.add_argument('-d', '--deploy-key', dest='deploy_key')
@@ -291,14 +298,14 @@ if __name__ == '__main__':
 
     deadline_parser = subparsers.add_parser(
         'deadline',
-        description='set tags at deadline')
+        description='Sets the tags at a deadline to permanently mark it in the version history')
     deadline_parser.set_defaults(func=deadline)
     deadline_parser.add_argument('-t', '--tag-name', dest='tag_name')
     deadline_parser.add_argument('-r', '--reference', dest='reference')
 
     plagiates_parser = subparsers.add_parser(
         'plagiates',
-        description='set tags at plagiates')
+        description='Runs the plagiarism checker on all solutions using a reference project as the baseline')
     plagiates_parser.set_defaults(func=plagiates)
     plagiates_parser.add_argument('-t', '--tag-name', dest='tag_name')
     plagiates_parser.add_argument('-r', '--reference', dest='reference')
