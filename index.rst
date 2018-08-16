@@ -22,8 +22,5 @@ Indices and tables
 .. automodule:: abgabesystem
    :members:
 
-.. autoclass:: abgabesystem.Course
-   :members:
-
 .. autoclass:: abgabesystem.Student
    :members:
