@@ -39,7 +39,7 @@ def create_tag(project, tag, ref):
     deadline
     """
 
-    print('Project %s. Creating tag %s' % (project.name, tag))
+    print('Project %s. Creating tag %s' % (project.path, tag))
 
     project.tags.create({
         'tag_name': tag,
@@ -150,6 +150,7 @@ def setup_course(gl, group, students_csv, deploy_key):
             'name': 'solutions',
             'path': 'solutions',
             'parent_id': group.id,
+            'visibility': 'internal',
         })
     except gitlab.exceptions.GitlabCreateError as e:
         log.info('Failed to create solutions group. %s' % e.error_message)
@@ -162,7 +163,19 @@ def setup_course(gl, group, students_csv, deploy_key):
     try:
         reference_project = gl.projects.create({
             'name': 'solutions',
-            'namespace_id': solution.id
+            'namespace_id': solution.id,
+            'visibility': 'internal',
+        })
+        reference_project.commits.create({
+            'branch': 'master',
+            'commit_message': 'Initial commit',
+            'actions': [
+                {
+                    'action': 'create',
+                    'file_path': 'README.md',
+                    'content': 'Example solutions go here',
+                },
+            ]
         })
     except gitlab.exceptions.GitlabCreateError as e:
         log.info('Failed to setup group structure. %s' % e.error_message)
@@ -198,7 +211,7 @@ def deadline(gl, args):
         reference = gl.projects.get(args.reference, lazy=True)
 
         for fork in reference.forks.list():
-            project = gl.projects.get(fork.id, lazy=True)
+            project = gl.projects.get(fork.id, lazy=False)
             try:
                 create_tag(project, deadline_name, 'master')
             except gitlab.exceptions.GitlabCreateError as e:
@@ -213,30 +226,32 @@ def plagiates(gl, args):
     """
 
     tag = args.tag_name
+    reference = gl.projects.get(args.reference, lazy=True)
     try:
-        reference = gl.projects.get(args.reference, lazy=True)
+        os.mkdir('solutions')
+    except os.FileExistsError as e:
+        print(e)
+    os.chdir('solutions')
+
+    for fork in reference.forks.list():
+        project = gl.projects.get(fork.id, lazy=True)
         try:
-            os.mkdir('solutions')
-        except os.FileExistsError as e:
-            print(e)
-        os.chdir('solutions')
+            subprocess.run(
+                ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, project.path_with_namespace])
+            os.chdir('..')
+        except:
+            print(e.error_message)
 
-        for fork in reference.forks.list():
-            project = gl.projects.get(fork.id, lazy=True)
-            try:
-                subprocess.run(
-                    ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, project.path_with_namespace])
-                os.chdir('..')
-
-        subprocess.run(
-            ['java', '-jar', args.jplag_jar, '-s', 'solutions', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
+    subprocess.run(
+        ['java', '-jar', args.jplag_jar, '-s', 'solutions', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
 
 
 def course(gl, args):
     try:
         group = gl.groups.create({
             'name': args.course,
-            'path': args.course
+            'path': args.course,
+            'visibility': 'internal',
         })
         log.info('Created group %s' % args.course)
     except gitlab.exceptions.GitlabCreateError as e:
