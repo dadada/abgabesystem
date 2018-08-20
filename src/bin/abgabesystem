@@ -2,7 +2,7 @@
 
 import gitlab
 import argparse
-import logging
+import logging as log
 
 from abgabesystem.commands import create_users, projects, deadline, plagiates, course
 
@@ -39,14 +39,14 @@ if __name__ == '__main__':
 
     deadline_parser = subparsers.add_parser(
         'deadline',
-        description='Sets the tags at a deadline to permanently mark it in the version history')
+        help='Sets the tags at a deadline to permanently mark it in the version history')
     deadline_parser.set_defaults(func=deadline)
     deadline_parser.add_argument('-t', '--tag-name', dest='tag_name')
     deadline_parser.add_argument('-r', '--reference', dest='reference')
 
     plagiates_parser = subparsers.add_parser(
         'plagiates',
-        description='Runs the plagiarism checker on all solutions using a reference project as the baseline')
+        help='Runs the plagiarism checker on all solutions using a reference project as the baseline')
     plagiates_parser.set_defaults(func=plagiates)
     plagiates_parser.add_argument('-t', '--tag-name', dest='tag_name')
     plagiates_parser.add_argument('-r', '--reference', dest='reference')
