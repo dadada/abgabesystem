@@ -1,13 +1,13 @@
 image: $CI_REGISTRY/abgabesystem/docker-abgabesystem:latest
 
 variables:
-  BASECODE: solutions/solutions
+  REFERENCE_SOLUTION: $CI_PROJECT_NAMESPACE/solutions/solutions
+  JPLAG_PATH: /app/jplag.jar
   CI_REPO_HOST: $CI_REGISTRY
 
 stages:
   - test
-  - sync
-  - deadlines
+  - deadline
   - plagiates
 
 before_script:
@@ -22,26 +22,29 @@ before_script:
   ## get API token from secret variable
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
   - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
+  - python setup.py install
 
 deadlines:
+  ## creates the pushed tag inside all projects
   stage: deadlines
   tags:
     - abgabesystem
 
   script:
-    - python3 ./abgabesystem.py deadline -t test -r test_course/solutions/solutions
+    - abgabesystem deadline -t $CI_COMMIT_REF_NAME -r $REFERENCE_SOLUTION
 
   only:
     - tags
 
 plagiates:
+  ## creates checkout of the tag for all projects and runs plagiarism checker
   stage: plagiates
   tags:
     - abgabesystem
 
   script:
     - mkdir -p results
-    - python3 ./abgabesystem.py plagiates -t test -r test_course/solutions/solutions -j /app/jplag.jar
+    - abgabesystem plagiates -t $CI_COMMIT_REF_NAME -r $REFERENCE_SOLUTION -j $JPLAG_PATH
 
   artifacts:
     paths:
@@ -51,7 +54,8 @@ plagiates:
     - tags
 
 doc:
-  stage: test
+  ## creates html documentation
+  stage: doc
   tags:
     - abgabesystem
 
