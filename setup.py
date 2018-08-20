@@ -13,6 +13,8 @@ setup(
     install_requires=[
         'python-gitlab',
     ],
-    scripts=['bin/abgabesystem'],
+    setup_requires=["pytest-runner"],
+    tests_require=["pytest"],
+    scripts=['src/bin/abgabesystem'],
     zip_safe=False,
     license='GPLv3')
