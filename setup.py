@@ -1,4 +1,4 @@
-from setuptools import setup, find_namespace_packages
+from setuptools import setup, find_packages
 
 setup(
     name='abgabesystem',
@@ -10,7 +10,7 @@ setup(
     author='Tim Schubert',
     author_email='abgabesystem@timschubert.net',
     package_dir={'': 'src'},
-    packages=find_namespace_packages(where='src'),
+    packages=find_packages(where='src'),
     install_requires=[
         'python-gitlab',
     ],
