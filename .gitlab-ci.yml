@@ -23,7 +23,7 @@ before_script:
   ## get API token from secret variable
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
   - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
-  - python setup.py install
+  - python3 setup.py install
 
 deadlines:
   ## creates the pushed tag inside all projects
