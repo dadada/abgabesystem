@@ -12,7 +12,7 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages(where='src'),
     install_requires=[
-        'python-gitlab >= 1.5.1',
+        'python-gitlab>=1.5.1',
     ],
     setup_requires=["pytest-runner"],
     tests_require=["pytest"],
