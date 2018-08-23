@@ -36,7 +36,7 @@ def deadline(gl, args):
 
     deadline_name = args.tag_name
     try:
-        reference = gl.projects.get(args.reference, lazy=True)
+        reference = gl.projects.get(args.reference, lazy=False)
 
         try:
             create_tag(reference, deadline_name, 'master')
@@ -58,11 +58,12 @@ def plagiates(gl, args):
     """Runs the plagiarism checker (JPlag) for the solutions with a certain tag
     """
 
+    solutions_dir = 'input'
     tag = args.tag_name
     reference = gl.projects.get(args.reference, lazy=False)
-    if not os.path.exists('solutions'):
-        os.mkdir('input')
-    os.chdir('input')
+    if not os.path.exists(solutions_dir):
+        os.mkdir(solutions_dir)
+    os.chdir(solutions_dir)
     try:
         subprocess.run(
             ['git', 'clone', '--branch', tag, reference.ssh_url_to_repo, reference.path_with_namespace])
@@ -77,7 +78,7 @@ def plagiates(gl, args):
             print(e.error_message)
     os.chdir('..')
     subprocess.run(
-        ['java', '-jar', args.jplag_jar, '-s', input, '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
+        ['java', '-jar', args.jplag_jar, '-s', solutions_dir, '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
 
 
 def course(gl, args):
