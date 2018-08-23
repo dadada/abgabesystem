@@ -2,41 +2,47 @@
 
 ## Setup
 
-0. Optional: If you have not previously set up GitLab for the abgabesystem, you can use the playbook in playbook.yml to setup your instance.
+Operations 1 and 2 require super user privileges to the API. The rest don't.
 
-1. Create a new group with the name of the course.
+1. Import the students participating in the course into Gitlab. This is required to assign projects to each student. If you have exported a list of groups and functions from Stud.IP you can use that.
+```
+# abgabesystem users -s <students.csv> -b <LDAP base domain> -p main
+```
 
-2. Create a fork of abgabesystem inside that group.
+2. Create a group for your course using
+```
+# abgabesystem courses -c <some_course>
+   ```
+   
+3. Create a fork of this project inside the namespace of the group that has been created and configure your API token (`PRIVATE_API_TOKEN`) and deploy key (`SSH_PRIVATE_KEY`) (see .gitlab-ci.yml) for the forked project.
 
-3. Configure config.yml and generate an SSH key pair.
-   Add the private key to the fork as the secret variable SSH_PRIVATE_KEY.
-   Add the public key to config.yml as deploy_key.
+4. Set up the project for the example solutions and the student projects. If you have pre-existing example solutions place them in `<some_course>/solutions/solutions`.
+```
+# abgabesystem projects -c <some_course> -d <deploy key> -s <students.csv>
+```
 
-4. Export the student list from StudIP and add it to the project.
+5. Add all administrative users (e.g. users supervising the course or checking homework solutions) to the group of the course.
 
-5. Create an API key with admin access and add it to the fork as the secret variable PRIVATE_API_TOKEN.
-
-6. Add all administrative users to the group of your course (but not the students).
-
-The CI jobs should then create the student repositories.
+6. At the deadline of each exercise trigger the plagiarism checker using
+```
+# git tag <exercise_name>
+# git push --tags
+```
+It can be useful to do this from a cronjob.
 
 ## Recommended settings for gitlab.rb
 
 ```
  gitlab_rails['gitlab_default_can_create_group'] = false
- gitlab_rails['gitlab_default_projects_features_container_registry'] = false
 
  # see gitlab documentation and add your ldap config
  gitlab_rails['ldap_enabled'] = true
-
- # if you don't have TLS otherwise
- letsencrypt['enable'] = true
 ```
 
 Also, you should 
 
-- set the default project limit for each user to 0 and
-- set default settings for projects to partially protected so that developers (e.g. students) can not force push tag and commits to protected branches (master)
+- set the default project limit for each user to 0
+- set default settings for projects to partially protected so that developers (e.g. students) can not force push tags and commits to protected branches (master) which is important for plagiarism controls.
 
 ## Workflow
 
