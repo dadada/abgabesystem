@@ -65,7 +65,7 @@ doc:
 
   artifacts:
     paths:
-    - _build/html/
+    - doc/_build/html/
 
   only:
     - master
