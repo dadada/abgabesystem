@@ -1,3 +1,7 @@
+import os
+import subprocess
+import subprocess
+
 from .students import Student, create_user, get_students
 from .projects import create_tag, setup_course
 from gitlab.exceptions import GitlabCreateError, GitlabGetError
@@ -34,6 +38,11 @@ def deadline(gl, args):
     try:
         reference = gl.projects.get(args.reference, lazy=True)
 
+        try:
+            create_tag(reference, deadline_name, 'master')
+        except GitlabCreateError as e:
+            print(e.error_message)
+
         for fork in reference.forks.list():
             project = gl.projects.get(fork.id, lazy=False)
             try:
@@ -50,24 +59,25 @@ def plagiates(gl, args):
     """
 
     tag = args.tag_name
-    reference = gl.projects.get(args.reference, lazy=True)
+    reference = gl.projects.get(args.reference, lazy=False)
+    if not os.path.exists('solutions'):
+        os.mkdir('input')
+    os.chdir('input')
     try:
-        os.mkdir('solutions')
-    except os.FileExistsError as e:
-        print(e)
-    os.chdir('solutions')
-
+        subprocess.run(
+            ['git', 'clone', '--branch', tag, reference.ssh_url_to_repo, reference.path_with_namespace])
+    except subprocess.CalledProcessError as e:
+        print(e.error_message)
     for fork in reference.forks.list():
-        project = gl.projects.get(fork.id, lazy=True)
+        project = gl.projects.get(fork.id, lazy=False)
         try:
             subprocess.run(
                 ['git', 'clone', '--branch', tag, project.ssh_url_to_repo, project.path_with_namespace])
-            os.chdir('..')
-        except:
+        except subprocess.CalledProcessError as e:
             print(e.error_message)
-
+    os.chdir('..')
     subprocess.run(
-        ['java', '-jar', args.jplag_jar, '-s', 'solutions', '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
+        ['java', '-jar', args.jplag_jar, '-s', input, '-p', 'java', '-r', 'results', '-bc', args.reference, '-l', 'java17'])
 
 
 def course(gl, args):
