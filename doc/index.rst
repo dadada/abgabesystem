@@ -22,5 +22,14 @@ Indices and tables
 .. automodule:: abgabesystem
    :members:
 
-.. autoclass:: abgabesystem.Student
+.. automodule:: abgabesystem.projects
+   :members:
+
+.. automodule:: abgabesystem.students
+   :members:
+
+.. automodule:: abgabesystem.commands
+   :members:
+
+.. autoclass:: abgabesystem.students.Student
    :members:
