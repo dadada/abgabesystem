@@ -61,7 +61,7 @@ doc:
     - abgabesystem
 
   script:
-    - make html
+    - cd doc && make html
 
   artifacts:
     paths:
