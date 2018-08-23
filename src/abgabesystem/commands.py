@@ -1,4 +1,5 @@
 from .students import Student, create_user, get_students
+from .projects import create_tag, setup_course
 from gitlab.exceptions import GitlabCreateError, GitlabGetError
 
 
