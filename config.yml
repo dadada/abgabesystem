@@ -1,9 +1,0 @@
-ldap:
-  base: 'ou=people,dc=tu-bs,dc=de'
-  provider: main
-course:
-  !!python/object:abgabesystem.Course
-  name: test_course
-  students: Students.csv
-  deploy_key:
-    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKl2zu3ClMIOI6EhEi0qGjwCgEaWYfRl2149T45pcggnYc3CVln0FJhjXvWbfMU984TjJMw4X8dfeZpf9p7xtieAab6yz+vB6QTW1ur9Uge0Wv/D084Sdzb3FovC+Qr90d6BAd+A6+v/vEprTLnuX8McQuB4p8l6iimFrhmv4IdrD1W/y0AUEzdz/eXpsHavlqGrpb4oQ0aAnZq0qQ9cYAltcXKQzgLi7zoKJGNWR+gz4hfRfqme87+k0ABO3hWwcIuwm/XdHm9Z+hjZrPfqmZGJF71FasE9jymP0Si4sgQLjaX+qQh3ojubBN7RwhUo3zjFFFUL5/tLEIr42SGpXF abgabesystem'
