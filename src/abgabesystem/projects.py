@@ -111,6 +111,7 @@ def setup_projects(gl, course, deploy_key):
     if solutions is None:
         raise InvalidCourse("No solutions subgroup")
 
+    reference_project = None
     reference_projects = solutions.projects.list(search='solutions')
     for project in reference_projects:
         if project.name == 'solutions':
