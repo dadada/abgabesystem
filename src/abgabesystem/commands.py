@@ -3,7 +3,7 @@ import subprocess
 import logging as log
 
 from .students import Student, create_user, enroll_student, get_student_group
-from .projects import create_tag, setup_course
+from .projects import create_tag, setup_projects
 from gitlab.exceptions import GitlabCreateError, GitlabGetError
 
 
@@ -33,7 +33,7 @@ def projects(gl, args):
         group = groups[0]
         with open(args.deploy_key, 'r') as key, open(args.students, encoding='iso8859') as students_csv:
             key = key.read()
-            setup_course(gl, group, students_csv, key)
+            setup_projects(gl, group, students_csv, key)
 
 
 def deadline(gl, args):
