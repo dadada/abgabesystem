@@ -2,7 +2,7 @@ import os
 import subprocess
 import logging as log
 
-from .students import Student, create_user, get_students, enroll_student, get_student_group
+from .students import Student, create_user, enroll_student, get_student_group
 from .projects import create_tag, setup_course
 from gitlab.exceptions import GitlabCreateError, GitlabGetError
 
