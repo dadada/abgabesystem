@@ -26,14 +26,16 @@ def enroll_students(gl, args):
 def projects(gl, args):
     """Creates the projects for all course participants
     """
-    groups = gl.groups.list(search=args.course)
-    if len(groups) == 0 and groups[0].name == args.course:
-        log.warn('This group does not exist')
+    course = None
+    for g in gl.groups.list(search=args.course):
+        if g.name == args.course:
+            course = g
+    if course is None:
+        log.warn('The course does not exist')
     else:
-        group = groups[0]
-        with open(args.deploy_key, 'r') as key, open(args.students, encoding='iso8859') as students_csv:
+        with open(args.deploy_key, 'r') as key:
             key = key.read()
-            setup_projects(gl, group, students_csv, key)
+            setup_projects(gl, course, key)
 
 
 def deadline(gl, args):
