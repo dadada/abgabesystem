@@ -82,4 +82,4 @@ create_projects:
     - abgabesystem projects -c $CI_PROJECT_NAMESPACE -d deploy_key.pub
 
   only:
-    - master
+    - branches
