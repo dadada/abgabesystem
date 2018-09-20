@@ -1,6 +1,8 @@
 import csv
 import secrets
 
+from gitlab import GUEST_ACCESS
+
 
 class MissingStudentsGroup(Exception):
     pass
@@ -104,8 +106,11 @@ def get_student_group(gl, course_name):
     return students_group
 
 
-def enroll_student(gl, user, group):
+def enroll_student(gl, user, subgroup):
     """Adds a student to the course
     """
-    pass
 
+    subgroup.members.create({
+        'user_id': user.id,
+        'access_level': GUEST_ACCESS,
+    })
