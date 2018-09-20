@@ -4,10 +4,12 @@ variables:
   REFERENCE_SOLUTION: $CI_PROJECT_NAMESPACE/solutions/solutions
   JPLAG_PATH: /app/jplag.jar
   CI_REPO_HOST: $CI_REGISTRY
+  SSH_PUBLIC_KEY: deploy_key.pub
 
 stages:
   - test
   - doc
+  - projects
   - deadline
   - plagiates
 
@@ -66,6 +68,18 @@ doc:
   artifacts:
     paths:
     - doc/_build/html/
+
+  only:
+    - master
+
+create_projects:
+  ## create projects for all enrolled students
+  stage: projects
+  tags:
+    - abgabesystem
+
+  script:
+    - abgabesystem projects -c $CI_PROJECT_NAMESPACE -d $SSH_PUBLIC_KEY
 
   only:
     - master
