@@ -63,7 +63,7 @@ You can also [automate this](https://docs.gitlab.com/ce/ci/docker/using_docker_b
 
 Proceed by creating an API token that has access to the group of the course.
 Add this token as `PRIVATE_API_TOKEN` to the [secret variables](https://docs.gitlab.com/ce/ci/variables/) of the forked abgabesystem project.
-Then generate an SSH deploy key and add the private part as `SSH_PRIVATE_KEY` to the secret variables.
+Then generate an SSH deploy key and add the private part as `SSH_PRIVATE_KEY` and the public key as `SSH_PUBLIC_KEY` to the secret variables.
 The key will be used by the CI script to fetch from the student projects.
 
 Set up the the student projects using

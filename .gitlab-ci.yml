@@ -4,7 +4,6 @@ variables:
   REFERENCE_SOLUTION: $CI_PROJECT_NAMESPACE/solutions/solutions
   JPLAG_PATH: /app/jplag.jar
   CI_REPO_HOST: $CI_REGISTRY
-  SSH_PUBLIC_KEY: deploy_key.pub
 
 stages:
   - test
@@ -15,6 +14,7 @@ stages:
 
 before_script:
   ## get ssh private key from secret variable
+  - echo "$SSH_PUBLIC_KEY" | tr -d '\r' > deploy_key.pub
   - eval $(ssh-agent -s)
   - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
   - mkdir -p ~/.ssh
@@ -79,7 +79,7 @@ create_projects:
     - abgabesystem
 
   script:
-    - abgabesystem projects -c $CI_PROJECT_NAMESPACE -d $SSH_PUBLIC_KEY
+    - abgabesystem projects -c $CI_PROJECT_NAMESPACE -d deploy_key.pub
 
   only:
     - master
