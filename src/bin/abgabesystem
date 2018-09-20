@@ -4,7 +4,7 @@ import gitlab
 import argparse
 import logging as log
 
-from abgabesystem.commands import create_users, projects, deadline, plagiates, course
+from abgabesystem.commands import enroll_students, projects, deadline, plagiates, course
 
 if __name__ == '__main__':
 
@@ -17,9 +17,10 @@ if __name__ == '__main__':
 
     user_parser = subparsers.add_parser(
         'users',
-        help='Creates users from LDAP')
-    user_parser.set_defaults(func=create_users)
+        help='Creates users and enrolls them in the course')
+    user_parser.set_defaults(func=enroll_students)
     user_parser.add_argument('-s', '--students', dest='students')
+    user_parser.add_argument('-c', '--course', dest='course')
     user_parser.add_argument('-b', '--ldap-base', dest='ldap_base')
     user_parser.add_argument('-p', '--ldap-provider', dest='ldap_provider')
 
@@ -35,7 +36,6 @@ if __name__ == '__main__':
     projects_parser.set_defaults(func=projects)
     projects_parser.add_argument('-c', '--course', dest='course')
     projects_parser.add_argument('-d', '--deploy-key', dest='deploy_key')
-    projects_parser.add_argument('-s', '--students', dest='students')
 
     deadline_parser = subparsers.add_parser(
         'deadline',

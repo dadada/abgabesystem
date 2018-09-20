@@ -1,19 +1,24 @@
 import os
 import subprocess
-import subprocess
+import logging as log
 
-from .students import Student, create_user, get_students
+from .students import Student, create_user, get_students, enroll_student, get_student_group
 from .projects import create_tag, setup_course
 from gitlab.exceptions import GitlabCreateError, GitlabGetError
 
 
-def create_users(gl, args):
+def enroll_students(gl, args):
     """Creates Gitlab users from exported students list
     """
+
+    student_group = get_student_group(gl, args.course)
+
     with open(args.students, encoding='iso8859') as students_csv:
         for student in Student.from_csv(students_csv):
             try:
-                create_user(gl, student, args.ldap_base, args.ldap_provider)
+                user = create_user(gl, student, args.ldap_base, args.ldap_provider)
+                # TODO this is ugly, should be group of course, but python-gitlab does not cache the query
+                enroll_student(gl, user, student_group)
             except GitlabCreateError:
                 log.warn('Failed to create user: %s' % student.user)
 
@@ -85,7 +90,7 @@ def course(gl, args):
     """Creates the group for the course
     """
     try:
-        group = gl.groups.create({
+        gl.groups.create({
             'name': args.course,
             'path': args.course,
             'visibility': 'internal',

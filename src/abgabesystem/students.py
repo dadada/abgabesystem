@@ -1,4 +1,13 @@
 import csv
+import secrets
+
+
+class MissingStudentsGroup(Exception):
+    pass
+
+
+class MissingCourseGroup(Exception):
+    pass
 
 
 class Student():
@@ -24,7 +33,7 @@ class Student():
                           + ' ' + line['Nachname'], line['Gruppe'])
 
 
-def get_students(gl, students_csv):
+def get_students_csv(gl, students_csv):
     """Returns already existing GitLab users for students from provided CSV file that have an account.
     """
 
@@ -32,6 +41,24 @@ def get_students(gl, students_csv):
         users = gl.users.list(search=student.user)
         if len(users) > 0:
             yield users[0]
+
+
+def enrolled_students(gl, course):
+    """Returns the students enrolled in the course
+    """
+
+    students = None
+    for group in course.subgroups.list(search='students'):
+        if group.name == 'students':
+            students = group
+
+    if students is None:
+        raise MissingStudentsGroup()
+
+    # get all members excluding inherited members
+    students = gl.groups.get(students.id)
+    for member in students.members.list():
+        yield gl.users.get(member.id)
 
 
 def create_user(gl, student, ldap_base, ldap_provider):
@@ -51,4 +78,34 @@ def create_user(gl, student, ldap_base, ldap_provider):
     user.customattributes.set('group', student.group)
 
     return user
+
+
+def get_student_group(gl, course_name):
+    """Gets the `students` subgroup for the course
+    """
+
+    course = None
+    for g in gl.groups.list(search=course_name):
+        if g.name == course_name:
+            course = g
+
+    if course is None:
+        raise MissingCourseGroup()
+
+    students_group = None
+
+    for g in course.subgroups.list(search='students'):
+        if g.name == 'students':
+            students_group = gl.groups.get(g.id)
+
+    if students_group is None:
+        raise MissingStudentsGroup()
+
+    return students_group
+
+
+def enroll_student(gl, user, group):
+    """Adds a student to the course
+    """
+    pass
 

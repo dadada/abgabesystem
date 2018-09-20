@@ -1,4 +1,10 @@
+import logging as log
+
+from gitlab import DEVELOPER_ACCESS
 from gitlab.exceptions import GitlabError, GitlabCreateError
+from .students import enrolled_students
+from .course import InvalidCourse
+
 
 def create_tag(project, tag, ref):
     """Creates protected tag on ref
@@ -60,7 +66,7 @@ def create_project(gl, group, user, reference, deploy_key):
     try:
         subgroup.members.create({
             'user_id': user.id,
-            'access_level': gitlab.DEVELOPER_ACCESS,
+            'access_level': DEVELOPER_ACCESS,
         })
     except GitlabError:
         log.warning('Failed to add student %s to its own group' % user.username)
@@ -71,55 +77,47 @@ def create_project(gl, group, user, reference, deploy_key):
         log.warning(e.error_message)
 
 
-def setup_course(gl, group, students_csv, deploy_key):
+def create_reference_solution(gl, namespace):
+    reference_project = gl.projects.create({
+        'name': 'solutions',
+        'namespace_id': namespace,
+        'visibility': 'internal',
+    })
+    reference_project.commits.create({
+        'branch': 'master',
+        'commit_message': 'Initial commit',
+        'actions': [
+            {
+                'action': 'create',
+                'file_path': 'README.md',
+                'content': 'Example solutions go here',
+            },
+        ]
+    })
+
+    return reference_project
+
+
+def setup_projects(gl, course, deploy_key):
     """Sets up the internal structure for the group for use with the course
     """
-    solution = None
-    reference_project = None
 
-    try:
-        solution = gl.groups.create({
-            'name': 'solutions',
-            'path': 'solutions',
-            'parent_id': group.id,
-            'visibility': 'internal',
-        })
-    except GitlabCreateError as e:
-        log.info('Failed to create solutions group. %s' % e.error_message)
-        solutions = group.subgroups.list(search='solutions')
-        if len(solutions) > 0 and solutions[0].name == 'solutions':
-            solution = gl.groups.get(solutions[0].id, lazy=True)
-        else:
-            raise(GitlabCreateError(error_message='Failed to setup solutions subgroup'))
+    solutions = None
+    solutions_groups = course.subgroups.list(search='solutions')
+    for group in solutions_groups:
+        if group.name == 'solutions':
+            solutions = group
 
-    try:
-        reference_project = gl.projects.create({
-            'name': 'solutions',
-            'namespace_id': solution.id,
-            'visibility': 'internal',
-        })
-        reference_project.commits.create({
-            'branch': 'master',
-            'commit_message': 'Initial commit',
-            'actions': [
-                {
-                    'action': 'create',
-                    'file_path': 'README.md',
-                    'content': 'Example solutions go here',
-                },
-            ]
-        })
-    except GitlabCreateError as e:
-        log.info('Failed to setup group structure. %s' % e.error_message)
-        projects = solution.projects.list(search='solutions')
-        if len(projects) > 0 and projects[0].name == 'solutions':
-            reference_project = gl.projects.get(projects[0].id)
-        else:
-            raise(GitlabCreateError(error_message='Failed to setup reference solutions'))
+    if solutions is None:
+        raise InvalidCourse("No solutions subgroup")
 
-    if solution is None or reference_project is None:
-        raise(GitlabCreateError(error_message='Failed to setup course'))
+    reference_projects = solutions.projects.list(search='solutions')
+    for project in reference_projects:
+        if project.name == 'solutions':
+            reference_project = gl.projects.get(project.id)
 
-    for user in get_students(gl, students_csv):
-        create_project(gl, solution, user, reference_project, deploy_key)
+    if reference_project is None:
+        reference_project = create_reference_solution(gl, solutions.id)
 
+    for user in enrolled_students(gl, course):
+        create_project(gl, solutions, user, reference_project, deploy_key)

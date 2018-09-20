@@ -18,7 +18,7 @@ Operations 1 and 2 require super user privileges to the API. The rest don't.
 
 4. Set up the project for the example solutions and the student projects. If you have pre-existing example solutions place them in `<some_course>/solutions/solutions`.
 ```
-# abgabesystem projects -c <some_course> -d <deploy key> -s <students.csv>
+# abgabesystem projects -c <some_course> -d <deploy key>
 ```
 
 5. Add all administrative users (e.g. users supervising the course or checking homework solutions) to the group of the course.
