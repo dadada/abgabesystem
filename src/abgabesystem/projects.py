@@ -106,7 +106,7 @@ def setup_projects(gl, course, deploy_key):
     solutions_groups = course.subgroups.list(search='solutions')
     for group in solutions_groups:
         if group.name == 'solutions':
-            solutions = group
+            solutions = gl.groups.get(group.id)
 
     if solutions is None:
         raise InvalidCourse("No solutions subgroup")
