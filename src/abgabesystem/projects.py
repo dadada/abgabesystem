@@ -56,13 +56,14 @@ def create_project(gl, group, user, reference, deploy_key):
             'path': user.username,
             'parent_id': group.id
         })
-    except GitlabError as e:
-        subgroups = group.subgroups.list(search=user.username)
-        if len(subgroups) > 0 and subgroup[0].name == user.username:
-            subgroup = subgroups[0]
-            subgroup = gl.groups.get(subgroup.id, lazy=True)
-        else:
+    except GitlabCreateError as e:
+        for g in group.subgroups.list(search=user.username):
+            if g.name == user.username:
+                subgroup = gl.groups.get(g.id, lazy=True)
+
+        if subgroup is None:
             raise(e)
+
     try:
         subgroup.members.create({
             'user_id': user.id,
