@@ -66,17 +66,6 @@ Add this token as `PRIVATE_API_TOKEN` to the [secret variables](https://docs.git
 Then generate an SSH deploy key and add the private part as `SSH_PRIVATE_KEY` and the public key as `SSH_PUBLIC_KEY` to the secret variables.
 The key will be used by the CI script to fetch from the student projects.
 
-Set up the the student projects using
-
-```
-$ abgabesystem projects -c <some_course> -d <deploy key> -s <students.csv>
-
-```
-
-Here deploy_key is the *PUBLIC* part of the deploy key.
-This creates one project per student, that each is forked from a project where your example solutions will be stored (`<course>/solutions/solutions`).
-Check that `<course>/solutions/` a contains project for each student.
-
 At last, you can add everyone with permission to view all student solutions to the group of the course.
 
 ## Checking student solutions
