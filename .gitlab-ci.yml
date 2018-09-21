@@ -23,8 +23,15 @@ before_script:
   - ssh-keyscan $CI_REPO_HOST | tee ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
   ## get API token from secret variable
-  - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
-  - echo "private_token = ${PRIVATE_API_TOKEN}" >> $HOME/.python-gitlab.cfg
+  - echo "\
+     [global]
+     default = default
+     ssl_verify = true
+
+     [default]
+     url = $(echo ${CI_PROJECT_URL} | cut -d '/' -f -3)
+     api_version = 4
+     private_token = ${PRIVATE_API_TOKEN}" > $HOME/.python-gitlab.cfg
   - python3 setup.py install
 
 deadlines:
