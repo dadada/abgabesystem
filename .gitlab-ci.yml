@@ -24,14 +24,14 @@ before_script:
   - chmod 644 ~/.ssh/known_hosts
   ## get API token from secret variable
   - echo "\
-     [global]
-     default = default
-     ssl_verify = true
-
-     [default]
-     url = $(echo ${CI_PROJECT_URL} | cut -d '/' -f -3)
-     api_version = 4
-     private_token = ${PRIVATE_API_TOKEN}" > $HOME/.python-gitlab.cfg
+     [global]\n
+     default = default\n
+     ssl_verify = true\n
+     \n
+     [default]\n
+     url = $(echo ${CI_PROJECT_URL} | cut -d '/' -f -3)\n
+     api_version = 4\n
+     private_token = ${PRIVATE_API_TOKEN}\n" > $HOME/.python-gitlab.cfg
   - python3 setup.py install
 
 deadlines:
