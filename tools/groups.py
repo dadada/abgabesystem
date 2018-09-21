@@ -12,6 +12,8 @@ with open(argv[2], 'r', encoding="latin-1") as csv:
         tokens = line.split(';')
         student = tokens[5].replace('"', "").split(" ")[0]
         group = tokens[0].replace('"', "").split(" ")[0]
+        if group != argv[3]:
+            continue
         url = course_url + "/solutions/" + student + "/solutions"
         path = "solutions/" + group + "/" + student
         if isdir(path):
