@@ -23,7 +23,7 @@ before_script:
   - ssh-keyscan $CI_REPO_HOST | tee ~/.ssh/known_hosts
   - chmod 644 ~/.ssh/known_hosts
   ## get API token from secret variable
-  - ./build-config.sh 
+  - ./tools/build-config.sh 
   - cp python-gitlab.cfg $HOME/.python-gitlab.cfg
   - python3 setup.py install
 
