@@ -1,8 +1,10 @@
 # The abgabesystem
 
+[GitHub](https://github.com/timschubert/abgabesystem)
+
 ## About
 
-*Behold, the (almighty) abgabesystem!**
+*Behold, the (almighty) abgabesystem!*
 
 The aim of this project is to automate the handling of students' homework solutions using Gitlab.
 So far It can
@@ -17,7 +19,7 @@ So far It can
 ## Setup Gitlab and CI runners
 
 There are multiple components involved in the abgabesystem.
-The CI script uses a [Docker Container](https://github.com/timschubert/docker-abgabesystem) that contains the Python module and the [https://jplag.ipd.kit.edu/](JPlag) plagiarism checker.
+The CI script uses a [Docker Container](https://github.com/timschubert/docker-abgabesystem) that contains the Python module and the [JPlag](https://jplag.ipd.kit.edu/) plagiarism checker.
 Another container with [Checkstyle](https://github.com/timschubert/docker-checkstyle) is optionally required for style checking of each student repository.
 
 If you do not already have a working Gitlab instance see [here](https://docs.gitlab.com/omnibus/README.html#installation) how to install and configure it.
