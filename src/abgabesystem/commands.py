@@ -9,6 +9,10 @@ from gitlab.exceptions import GitlabCreateError, GitlabGetError
 
 def enroll_students(gl, args):
     """Creates Gitlab users from exported students list
+
+    Args:
+        gl: API
+        args: command line arguments
     """
 
     student_group = get_student_group(gl, args.course)
@@ -25,6 +29,10 @@ def enroll_students(gl, args):
 
 def projects(gl, args):
     """Creates the projects for all course participants
+
+    Args:
+        gl: API
+        args: command line arguments
     """
     course = None
     for g in gl.groups.list(search=args.course):
@@ -39,7 +47,12 @@ def projects(gl, args):
 
 
 def deadline(gl, args):
-    """Checks deadlines for course and triggers deadline if it is reached"""
+    """Checks deadlines for course and triggers deadline if it is reached
+
+    Args:
+        gl: API
+        args: command line arguments
+    """
 
     deadline_name = args.tag_name
     try:
@@ -63,6 +76,10 @@ def deadline(gl, args):
 
 def plagiates(gl, args):
     """Runs the plagiarism checker (JPlag) for the solutions with a certain tag
+
+    Args:
+        gl: API
+        args: command line arguments
     """
 
     solutions_dir = 'input'
@@ -90,6 +107,10 @@ def plagiates(gl, args):
 
 def course(gl, args):
     """Creates the group for the course
+
+    Args:
+        gl: API
+        args: command line arguments
     """
     try:
         gl.groups.create({

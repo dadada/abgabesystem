@@ -10,7 +10,12 @@ def create_tag(project, tag, ref):
     """Creates protected tag on ref
 
     The tag is used by the abgabesystem to mark the state of a solution at the
-    deadline
+    deadline.
+
+    Args:
+        project: GIT repository to create the tag in
+        tag: name of the tag to be created
+        ref: name of the red (branch / commit) to create the new tag on
     """
 
     print('Project %s. Creating tag %s' % (project.path, tag))
@@ -21,9 +26,17 @@ def create_tag(project, tag, ref):
     })
 
 
-
 def fork_reference(gl, reference, namespace, deploy_key):
     """Create fork of solutions for student.
+
+    Returns the created project.
+
+    Args:
+        gl: gitlab API object
+        reference: project to fork from
+        namespace: namespace to place the created project into
+        deploy_key: will be used by the abgabesystem to access the created
+                    project
     """
 
     fork = reference.forks.create({
@@ -46,6 +59,14 @@ def fork_reference(gl, reference, namespace, deploy_key):
 def create_project(gl, group, user, reference, deploy_key):
     """Creates a namespace (subgroup) and forks the project with
     the reference solutions into that namespace
+
+    Args:
+        gl: Gitlab API object
+        group: project will be created in the namespace of this group
+        user: user to add to the project as a developer
+        reference: project to fork the new project from
+        deploy_key: deploy key used by the `abgabesystem` to access the new
+                    project
     """
 
     subgroup = None
@@ -79,6 +100,14 @@ def create_project(gl, group, user, reference, deploy_key):
 
 
 def create_reference_solution(gl, namespace):
+    """Creates a new project for the reference solutions.
+
+    Args:
+        gl: gitlab API object
+        namespace: namespace to create the project in (that of the solutions for the course)
+    """
+
+
     reference_project = gl.projects.create({
         'name': 'solutions',
         'namespace_id': namespace,
@@ -100,7 +129,12 @@ def create_reference_solution(gl, namespace):
 
 
 def setup_projects(gl, course, deploy_key):
-    """Sets up the internal structure for the group for use with the course
+    """Sets up the internal structure for the group for use with the course.
+
+    Args:
+        gl: gitlab API object
+        course: course to set up projects for
+        deploy_key: will be used to access the solutions from the abgabesystem
     """
 
     solutions = None

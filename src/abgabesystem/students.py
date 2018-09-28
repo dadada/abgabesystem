@@ -5,10 +5,17 @@ from gitlab import GUEST_ACCESS
 
 
 class MissingStudentsGroup(Exception):
+    """Raised if a the group for the students has not already been created
+    inside the course.
+    """
+
     pass
 
 
 class MissingCourseGroup(Exception):
+    """Raised if the group for the course is missing.
+    """
+
     pass
 
 
@@ -18,6 +25,12 @@ class Student():
     Students are read from the CSV file that was exported from Stud.IP.
     For each user, a dummy LDAP user is created in Gitlab.
     Upon the first login Gitlab fetches the complete user using LDAP.
+
+    Args:
+        user: user name
+        mail: mail address of the user
+        name: full name of the user
+        group: tutorial group of the user
     """
 
     def __init__(self, user, mail, name, group):
@@ -27,7 +40,11 @@ class Student():
         self.group = group
 
     def from_csv(csvfile):
-        """Creates an iterable containing the users"""
+        """Creates an iterable containing the users
+
+        Args:
+            csvfile: CSV file from Stud.IP (latin-1)
+        """
         reader = csv.DictReader(csvfile, delimiter=';', quotechar='"')
 
         for line in reader:
@@ -36,7 +53,12 @@ class Student():
 
 
 def get_students_csv(gl, students_csv):
-    """Returns already existing GitLab users for students from provided CSV file that have an account.
+    """Returns already existing GitLab users for students from provided CSV
+    file that have an account.
+
+    Args:
+        gl: Gitlab API object
+        students_csv: CSV file from Stud.IP
     """
 
     for student in Student.from_csv(students_csv):
@@ -47,6 +69,10 @@ def get_students_csv(gl, students_csv):
 
 def enrolled_students(gl, course):
     """Returns the students enrolled in the course
+
+    Args:
+        gl: Gitlab API object
+        course: course the students are enrolled in
     """
 
     students = None
@@ -66,6 +92,12 @@ def enrolled_students(gl, course):
 def create_user(gl, student, ldap_base, ldap_provider):
     """Creates a GitLab user account student.
     Requires admin privileges.
+
+    Args:
+        gl: Gitlab API object
+        student: student to create user for
+        ldap_base: the search base string for the LDAP query
+        ldap_provider: LDAP provider configured for Gitlab (usually `main`)
     """
 
     user = gl.users.create({
@@ -84,6 +116,10 @@ def create_user(gl, student, ldap_base, ldap_provider):
 
 def get_student_group(gl, course_name):
     """Gets the `students` subgroup for the course
+
+    Args:
+        gl: Gitlab API objects
+        course_name: name of the course
     """
 
     course = None
@@ -108,6 +144,11 @@ def get_student_group(gl, course_name):
 
 def enroll_student(gl, user, subgroup):
     """Adds a student to the course
+
+    Args:
+        gl: Gitlab API object
+        user: user to add to the course
+        subgroup: student will become member of this group
     """
 
     subgroup.members.create({
