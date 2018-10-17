@@ -137,7 +137,7 @@ def get_student_group(gl, course_name):
             students_group = gl.groups.get(g.id)
 
     if students_group is None:
-        raise MissingStudentsGroup()
+        students_group = create_students_group(gl, course)
 
     return students_group
 

@@ -54,7 +54,7 @@ Next, since there is currently no API available to export a list of participants
 This list may of course change from time to time, so make sure to re-run the script regularly.
 
 ```
-$ abgabesystem users -s <students.csv> -b <LDAP base domain> -p main
+$ abgabesystem users -c <course> -s <students.csv> -b <LDAP base domain> -p main
 ```
 
 Now create a fork of this repository inside the namespace of the course.
