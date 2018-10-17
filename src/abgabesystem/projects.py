@@ -3,7 +3,7 @@ import logging as log
 from gitlab import DEVELOPER_ACCESS
 from gitlab.exceptions import GitlabError, GitlabCreateError
 from .students import enrolled_students
-from .course import InvalidCourse
+from .course import InvalidCourse, create_solutions_group
 
 
 def create_tag(project, tag, ref):
@@ -144,7 +144,7 @@ def setup_projects(gl, course, deploy_key):
             solutions = gl.groups.get(group.id)
 
     if solutions is None:
-        raise InvalidCourse("No solutions subgroup")
+	solutions = create_solutions_group(gl, course)
 
     reference_project = None
     reference_projects = solutions.projects.list(search='solutions')
