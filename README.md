@@ -9,12 +9,12 @@
 The aim of this project is to automate the handling of students' homework solutions using Gitlab.
 So far It can
 
-- import student accounts from LDAP,
-- import a list of users from Stud.IP,
-- create groups for courses in Gitlab,
+- import student accounts from LDAP
+- import a list of users from Stud.IP
+- create groups for courses in Gitlab
 - set up repositories for the students
-- run automated style-checks and
-- test for plagiarisms.
+- run automated style-checks
+- test for plagiarisms
 
 ## Setup Gitlab and CI runners
 
