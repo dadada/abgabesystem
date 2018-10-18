@@ -144,7 +144,7 @@ def setup_projects(gl, course, deploy_key):
             solutions = gl.groups.get(group.id)
 
     if solutions is None:
-	solutions = create_solutions_group(gl, course)
+        solutions = create_solutions_group(gl, course)
 
     reference_project = None
     reference_projects = solutions.projects.list(search='solutions')
