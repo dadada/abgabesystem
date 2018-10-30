@@ -70,6 +70,10 @@ The key will be used by the CI script to fetch from the student projects.
 
 At last, you can add everyone with permission to view all student solutions to the group of the course.
 
+## Permissions
+
+Configure Gitlab to allow developers to push on the master branch, but not force push to protected branches. An easy way to achieve this is to set Gitlab to "Partially Protected". A sane default is also to not allow students to create new projects.
+
 ## Checking student solutions
 
 When you have reachd the deadline for an exercise, push a new tag to `<course>/abgabesystem` to trigger the plagiarism checker and automatically create a tag in each student project.
